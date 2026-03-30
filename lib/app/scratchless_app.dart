@@ -473,6 +473,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
                 )
               : OnboardingScreen(
                   onComplete: _completeOnboarding,
+                  onStartPremiumTrial: _startPremiumTrial,
                 ),
     );
   }

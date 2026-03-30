@@ -18,10 +18,12 @@ class OnboardingResult {
 
 class OnboardingScreen extends StatefulWidget {
   final ValueChanged<OnboardingResult> onComplete;
+  final VoidCallback onStartPremiumTrial;
 
   const OnboardingScreen({
     super.key,
     required this.onComplete,
+    required this.onStartPremiumTrial,
   });
 
   @override
@@ -178,15 +180,38 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   double get _estimatedYearlySpend => _estimatedMonthlySpend * 12;
 
+  OnboardingResult get _result => OnboardingResult(
+        frequencyPerWeek: _frequencyPerWeek,
+        averageSpend: _averageSpend,
+        goal: _goal,
+      );
+
+  void _finishOnboarding() {
+    widget.onComplete(_result);
+  }
+
+  Future<void> _openOnboardingPaywall() async {
+    final choice = await Navigator.of(context).push<_OnboardingPaywallChoice>(
+      MaterialPageRoute(
+        builder: (_) => const _OnboardingPaywallScreen(),
+        fullscreenDialog: true,
+      ),
+    );
+
+    if (!mounted || choice == null) {
+      return;
+    }
+
+    if (choice == _OnboardingPaywallChoice.premium) {
+      widget.onStartPremiumTrial();
+    }
+
+    _finishOnboarding();
+  }
+
   void _next() {
     if (_isLastStep) {
-      widget.onComplete(
-        OnboardingResult(
-          frequencyPerWeek: _frequencyPerWeek,
-          averageSpend: _averageSpend,
-          goal: _goal,
-        ),
-      );
+      _openOnboardingPaywall();
       return;
     }
 
@@ -203,38 +228,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     setState(() {
       _step -= 1;
     });
-  }
-
-  Future<void> _showPremiumPreview() async {
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('ScratchLess Premium'),
-          content: const Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Premium is about deeper support, not blocking help.',
-              ),
-              SizedBox(height: 12),
-              Text('• Advanced trigger insights'),
-              Text('• Unlimited reminders and rescue plans'),
-              Text('• Accountability tools'),
-              Text('• Weekly reflections and recovery reports'),
-              Text('• Full history and deeper money tracking'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Continue free'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Widget _buildHeader({
@@ -321,35 +314,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildBullet(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 5),
-            child: Icon(
-              Icons.circle,
-              size: 8,
-              color: AppTheme.accent,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -514,9 +478,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ),
               const SizedBox(height: 6),
-              Text(
+              const Text(
                 'That is based on your current best estimate, not a perfection test.',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.mutedText,
                   fontSize: 14,
                 ),
@@ -621,7 +585,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         _buildHeader(
           headline: 'Here’s what ScratchLess helps you do.',
           body:
-              'Start with the essentials for free. Upgrade later only if you want deeper support.',
+              'Start free with the essentials. Upgrade only if you want deeper support later.',
         ),
         const SizedBox(height: 20),
         AppCard(
@@ -716,9 +680,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ],
               const SizedBox(height: 8),
-              Text(
+              const Text(
                 'You can adjust your answers later. Real logging will make the app smarter over time.',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.mutedText,
                   fontSize: 14,
                 ),
@@ -770,7 +734,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return _next;
     }
     if (_isLastStep) {
-      return _showPremiumPreview;
+      return _openOnboardingPaywall;
     }
     return _back;
   }
@@ -833,6 +797,130 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+enum _OnboardingPaywallChoice {
+  premium,
+  free,
+}
+
+class _OnboardingPaywallScreen extends StatelessWidget {
+  const _OnboardingPaywallScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('ScratchLess Premium'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Break the ticket cycle faster.',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Get deeper support with advanced insights, unlimited reminders and rescue plans, accountability tools, and weekly recovery reflections.',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          const AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Premium includes',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 12),
+                _StaticBullet('Advanced trigger insights'),
+                _StaticBullet('Unlimited reminders and rescue plans'),
+                _StaticBullet('Accountability partner tools'),
+                _StaticBullet('Weekly reflections and recovery reports'),
+                _StaticBullet('Full history and deeper money tracking'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          const AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Pricing',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Start free anytime. Upgrade when you want deeper support.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Annual is the best value — less than the cost of one bad ticket run.',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 14,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Billing is not wired yet in this build. Premium trial is simulated locally for now.',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          AppButton(
+            label: 'Try Premium',
+            icon: Icons.workspace_premium_rounded,
+            onPressed: () {
+              Navigator.of(context).pop(_OnboardingPaywallChoice.premium);
+            },
+          ),
+          const SizedBox(height: 10),
+          AppButton(
+            label: 'Continue Free',
+            icon: Icons.arrow_forward_rounded,
+            isPrimary: false,
+            onPressed: () {
+              Navigator.of(context).pop(_OnboardingPaywallChoice.free);
+            },
+          ),
+        ],
       ),
     );
   }
