@@ -16,6 +16,9 @@ import 'urge_scripts_screen.dart';
 class UrgeModeScreen extends StatefulWidget {
   final double averageSpend;
   final VoidCallback onComplete;
+  final VoidCallback onStartPremiumTrial;
+  final bool shouldShowSuccessPremiumPrompt;
+  final VoidCallback onAcknowledgeSuccessPremiumPrompt;
   final VoidCallback onOpenCopingStrategies;
   final VoidCallback onOpenNearMissEducation;
   final VoidCallback onOpenAccountability;
@@ -28,6 +31,9 @@ class UrgeModeScreen extends StatefulWidget {
     super.key,
     required this.averageSpend,
     required this.onComplete,
+    required this.onStartPremiumTrial,
+    required this.shouldShowSuccessPremiumPrompt,
+    required this.onAcknowledgeSuccessPremiumPrompt,
     required this.onOpenCopingStrategies,
     required this.onOpenNearMissEducation,
     required this.onOpenAccountability,
@@ -114,6 +120,74 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleComplete() async {
+    if (_completed) {
+      return;
+    }
+
+    setState(() {
+      _completed = true;
+    });
+
+    widget.onComplete();
+
+    if (!widget.shouldShowSuccessPremiumPrompt || !mounted) {
+      return;
+    }
+
+    final wantsPremium = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) {
+            return AlertDialog(
+              title: const Text('Nice save. Build on it.'),
+              content: const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Premium helps you keep momentum with custom urge plans, smarter reminders, and deeper trigger tracking.',
+                  ),
+                  SizedBox(height: 12),
+                  Text('• Custom urge plans'),
+                  Text('• Smarter reminders'),
+                  Text('• Deeper trigger tracking'),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Keep Going Free'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text('Unlock Premium'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (!mounted) {
+      return;
+    }
+
+    widget.onAcknowledgeSuccessPremiumPrompt();
+
+    if (wantsPremium) {
+      widget.onStartPremiumTrial();
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(
+          content: Text('Premium unlocked. Build on this win.'),
+        ),
+      );
+    }
   }
 
   @override
@@ -582,14 +656,7 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
           AppButton(
             label: _completed ? 'Urge already interrupted' : 'I got through this urge',
             icon: Icons.check_circle_rounded,
-            onPressed: _completed
-                ? null
-                : () {
-                    setState(() {
-                      _completed = true;
-                    });
-                    widget.onComplete();
-                  },
+            onPressed: _completed ? null : _handleComplete,
           ),
         ],
       ),

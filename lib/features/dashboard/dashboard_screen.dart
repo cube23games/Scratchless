@@ -39,6 +39,9 @@ class DashboardScreen extends StatelessWidget {
       onEditPurchase;
   final void Function(String id) onDeletePurchase;
   final VoidCallback onCompleteUrgeSession;
+  final VoidCallback onStartPremiumTrial;
+  final bool shouldShowSuccessPremiumPrompt;
+  final VoidCallback onAcknowledgeSuccessPremiumPrompt;
   final VoidCallback onOpenHelp;
   final VoidCallback onOpenCopingStrategies;
   final VoidCallback onOpenNearMissEducation;
@@ -70,6 +73,9 @@ class DashboardScreen extends StatelessWidget {
     required this.onEditPurchase,
     required this.onDeletePurchase,
     required this.onCompleteUrgeSession,
+    required this.onStartPremiumTrial,
+    required this.shouldShowSuccessPremiumPrompt,
+    required this.onAcknowledgeSuccessPremiumPrompt,
     required this.onOpenHelp,
     required this.onOpenCopingStrategies,
     required this.onOpenNearMissEducation,
@@ -382,6 +388,11 @@ class DashboardScreen extends StatelessWidget {
                   builder: (_) => UrgeModeScreen(
                     averageSpend: averageSpend,
                     onComplete: onCompleteUrgeSession,
+                    onStartPremiumTrial: onStartPremiumTrial,
+                    shouldShowSuccessPremiumPrompt:
+                        shouldShowSuccessPremiumPrompt,
+                    onAcknowledgeSuccessPremiumPrompt:
+                        onAcknowledgeSuccessPremiumPrompt,
                     onOpenCopingStrategies: onOpenCopingStrategies,
                     onOpenNearMissEducation: onOpenNearMissEducation,
                     onOpenAccountability: onOpenAccountability,

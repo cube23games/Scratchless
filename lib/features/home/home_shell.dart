@@ -58,6 +58,8 @@ class HomeShell extends StatefulWidget {
   final VoidCallback onCompleteUrgeSession;
   final ValueChanged<ReminderSettings> onUpdateReminderSettings;
   final VoidCallback onStartPremiumTrial;
+  final bool shouldShowSuccessPremiumPrompt;
+  final VoidCallback onAcknowledgeSuccessPremiumPrompt;
   final VoidCallback onSaveWeeklyReflectionToHistory;
   final ValueChanged<AccountabilityPartner> onUpdateAccountabilityPartner;
   final ValueChanged<StopReason> onAddStopReason;
@@ -101,6 +103,8 @@ class HomeShell extends StatefulWidget {
     required this.onCompleteUrgeSession,
     required this.onUpdateReminderSettings,
     required this.onStartPremiumTrial,
+    required this.shouldShowSuccessPremiumPrompt,
+    required this.onAcknowledgeSuccessPremiumPrompt,
     required this.onSaveWeeklyReflectionToHistory,
     required this.onUpdateAccountabilityPartner,
     required this.onAddStopReason,
@@ -251,6 +255,10 @@ class _HomeShellState extends State<HomeShell> {
         onEditPurchase: widget.onEditPurchase,
         onDeletePurchase: widget.onDeletePurchase,
         onCompleteUrgeSession: widget.onCompleteUrgeSession,
+        onStartPremiumTrial: widget.onStartPremiumTrial,
+        shouldShowSuccessPremiumPrompt: widget.shouldShowSuccessPremiumPrompt,
+        onAcknowledgeSuccessPremiumPrompt:
+            widget.onAcknowledgeSuccessPremiumPrompt,
         onOpenHelp: _openHelp,
         onOpenCopingStrategies: _openCopingStrategies,
         onOpenNearMissEducation: _openNearMissEducation,

@@ -29,6 +29,7 @@ class StoredAppState {
   final List<StopReason> stopReasons;
   final SpendCapPlan spendCapPlan;
   final List<RiskyPlace> riskyPlaces;
+  final bool hasSeenSuccessPremiumPrompt;
   final MilestoneState milestoneState;
 
   const StoredAppState({
@@ -47,6 +48,7 @@ class StoredAppState {
     required this.stopReasons,
     required this.spendCapPlan,
     required this.riskyPlaces,
+    required this.hasSeenSuccessPremiumPrompt,
     required this.milestoneState,
   });
 
@@ -67,6 +69,7 @@ class StoredAppState {
       stopReasons: const <StopReason>[],
       spendCapPlan: SpendCapPlan.defaults(),
       riskyPlaces: const <RiskyPlace>[],
+      hasSeenSuccessPremiumPrompt: false,
       milestoneState: MilestoneState.empty(),
     );
   }
@@ -95,6 +98,7 @@ class AppStorage {
   static const String _stopReasonsKey = 'stop_reasons';
   static const String _spendCapPlanKey = 'spend_cap_plan';
   static const String _riskyPlacesKey = 'risky_places';
+  static const String _hasSeenSuccessPremiumPromptKey = 'has_seen_success_premium_prompt';
   static const String _milestoneStateKey = 'milestone_state';
 
   static Future<StoredAppState> load() async {
@@ -194,6 +198,8 @@ class AppStorage {
         stopReasons: stopReasons,
         spendCapPlan: spendCapPlan,
         riskyPlaces: riskyPlaces,
+        hasSeenSuccessPremiumPrompt:
+            prefs.getBool(_hasSeenSuccessPremiumPromptKey) ?? false,
         milestoneState: milestoneState,
       );
     } catch (_) {
@@ -281,6 +287,11 @@ class AppStorage {
         .map((place) => jsonEncode(place.toJson()))
         .toList();
     await prefs.setStringList(_riskyPlacesKey, encodedRiskyPlaces);
+
+    await prefs.setBool(
+      _hasSeenSuccessPremiumPromptKey,
+      state.hasSeenSuccessPremiumPrompt,
+    );
 
     await prefs.setString(
       _milestoneStateKey,

@@ -50,6 +50,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
   List<StopReason> _stopReasons = <StopReason>[];
   SpendCapPlan _spendCapPlan = SpendCapPlan.defaults();
   List<RiskyPlace> _riskyPlaces = <RiskyPlace>[];
+  bool _hasSeenSuccessPremiumPrompt = false;
   MilestoneState _milestoneState = MilestoneState.empty();
 
   @override
@@ -150,6 +151,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
       _stopReasons = stored.stopReasons;
       _spendCapPlan = stored.spendCapPlan;
       _riskyPlaces = stored.riskyPlaces;
+      _hasSeenSuccessPremiumPrompt = stored.hasSeenSuccessPremiumPrompt;
       _milestoneState = stored.milestoneState;
     });
   }
@@ -172,6 +174,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
         stopReasons: _stopReasons,
         spendCapPlan: _spendCapPlan,
         riskyPlaces: _riskyPlaces,
+        hasSeenSuccessPremiumPrompt: _hasSeenSuccessPremiumPrompt,
         milestoneState: _milestoneState,
       ),
     );
@@ -403,6 +406,18 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     _persistState();
   }
 
+  void _acknowledgeSuccessPremiumPrompt() {
+    if (_hasSeenSuccessPremiumPrompt) {
+      return;
+    }
+
+    setState(() {
+      _hasSeenSuccessPremiumPrompt = true;
+    });
+
+    _persistState();
+  }
+
   void _celebrateMilestone(String id) {
     if (_milestoneState.celebratedIds.contains(id)) {
       return;
@@ -459,6 +474,12 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
                   onCompleteUrgeSession: _completeUrgeSession,
                   onUpdateReminderSettings: _updateReminderSettings,
                   onStartPremiumTrial: _startPremiumTrial,
+                  shouldShowSuccessPremiumPrompt:
+                      !_premiumState.isPremium &&
+                      !_hasSeenSuccessPremiumPrompt &&
+                      _urgeSessions.isEmpty,
+                  onAcknowledgeSuccessPremiumPrompt:
+                      _acknowledgeSuccessPremiumPrompt,
                   onSaveWeeklyReflectionToHistory: _saveWeeklyReflectionToHistory,
                   onUpdateAccountabilityPartner: _updateAccountabilityPartner,
                   onAddStopReason: _addStopReason,
