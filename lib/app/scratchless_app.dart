@@ -11,6 +11,7 @@ import '../core/models/stop_reason.dart';
 import '../core/models/urge_session_log.dart';
 import '../core/models/weekly_reflection_archive_item.dart';
 import '../core/services/local_notification_service.dart';
+import '../core/services/premium_prompt_service.dart';
 import '../core/services/milestone_service.dart';
 import '../core/services/risky_time_service.dart';
 import '../core/services/spend_cap_service.dart';
@@ -475,9 +476,13 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
                   onUpdateReminderSettings: _updateReminderSettings,
                   onStartPremiumTrial: _startPremiumTrial,
                   shouldShowSuccessPremiumPrompt:
-                      !_premiumState.isPremium &&
-                      !_hasSeenSuccessPremiumPrompt &&
-                      _urgeSessions.isEmpty,
+                      PremiumPromptService.canShow(
+                    type: PremiumPromptType.firstUrgeWin,
+                    premiumState: _premiumState,
+                    hasSeenSuccessPremiumPrompt:
+                        _hasSeenSuccessPremiumPrompt,
+                    urgeSessionsCount: _urgeSessions.length,
+                  ),
                   onAcknowledgeSuccessPremiumPrompt:
                       _acknowledgeSuccessPremiumPrompt,
                   onSaveWeeklyReflectionToHistory: _saveWeeklyReflectionToHistory,
