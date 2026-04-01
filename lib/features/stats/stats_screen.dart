@@ -31,6 +31,152 @@ class _LegendDot extends StatelessWidget {
     required this.label,
   });
 
+  Widget _buildCycleSection(BuildContext context) {
+    if (!FeatureGateService.advancedInsightsUnlocked(premiumState)) {
+      return AppCard(
+        onTap: () => _openPremiumScreen(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'Trigger-to-outcome cycle',
+              style: TextStyle(
+                color: AppTheme.mutedText,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Unlock a cycle view that shows what pulls you in, what kind of urge shows up, and what happened next.',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Premium cycle charts help turn scattered events into a pattern you can actually see.',
+              style: TextStyle(
+                color: AppTheme.mutedText,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final triggerPoints = PatternChartService.cycleTriggerPoints(logs);
+    final urgeContextPoints =
+        PatternChartService.cycleUrgeContextPoints(urgeSessions);
+    final outcomePoints = PatternChartService.cycleOutcomePoints(
+      purchaseLogs: logs,
+      urgeSessions: urgeSessions,
+    );
+
+    final hasTriggerData = triggerPoints.any((point) => point.value > 0);
+    final hasUrgeContextData =
+        urgeContextPoints.any((point) => point.value > 0);
+    final hasOutcomeData = outcomePoints.any((point) => point.value > 0);
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Trigger-to-outcome cycle',
+            style: TextStyle(
+              color: AppTheme.mutedText,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'See what tends to pull you in, what kind of urge shows up, and what happened next.',
+            style: TextStyle(
+              color: AppTheme.mutedText,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Trigger pressure',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (!hasTriggerData)
+            const Text(
+              'No tagged purchase data yet.',
+              style: TextStyle(
+                color: AppTheme.mutedText,
+                fontSize: 14,
+              ),
+            )
+          else
+            SizedBox(
+              height: 120,
+              child: PatternBarChart(
+                points: triggerPoints,
+              ),
+            ),
+          const SizedBox(height: 16),
+          const Text(
+            'Urge context',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (!hasUrgeContextData)
+            const Text(
+              'No urge-session context yet.',
+              style: TextStyle(
+                color: AppTheme.mutedText,
+                fontSize: 14,
+              ),
+            )
+          else
+            SizedBox(
+              height: 120,
+              child: PatternBarChart(
+                points: urgeContextPoints,
+              ),
+            ),
+          const SizedBox(height: 16),
+          const Text(
+            'Responses & outcomes',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (!hasOutcomeData)
+            const Text(
+              'No outcome pattern yet.',
+              style: TextStyle(
+                color: AppTheme.mutedText,
+                fontSize: 14,
+              ),
+            )
+          else
+            SizedBox(
+              height: 120,
+              child: PatternBarChart(
+                points: outcomePoints,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -593,6 +739,8 @@ class StatsScreen extends StatelessWidget {
           _buildPatternChartsSection(context),
           const SizedBox(height: 12),
           _buildSlipRecoverySection(context),
+          const SizedBox(height: 12),
+          _buildCycleSection(context),
           const SizedBox(height: 12),
           AppCard(
             onTap: () {

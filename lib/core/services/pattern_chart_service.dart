@@ -147,6 +147,115 @@ class PatternChartService {
     });
   }
 
+  static List<PatternBarPoint> cycleTriggerPoints(
+    List<PurchaseLog> purchaseLogs,
+  ) {
+    final counts = <String, int>{};
+
+    for (final log in purchaseLogs) {
+      for (final rawTag in log.tags) {
+        final tag = rawTag.trim();
+        if (tag.isEmpty) {
+          continue;
+        }
+        counts[tag] = (counts[tag] ?? 0) + 1;
+      }
+    }
+
+    if (counts.isEmpty) {
+      return const <PatternBarPoint>[];
+    }
+
+    final sorted = counts.entries.toList()
+      ..sort((a, b) {
+        final diff = b.value.compareTo(a.value);
+        if (diff != 0) {
+          return diff;
+        }
+        return a.key.toLowerCase().compareTo(b.key.toLowerCase());
+      });
+
+    return sorted.take(4).map((entry) {
+      return PatternBarPoint(
+        label: _compactPhrase(entry.key),
+        value: entry.value.toDouble(),
+        topLabel: '${entry.value}',
+      );
+    }).toList();
+  }
+
+  static List<PatternBarPoint> cycleUrgeContextPoints(
+    List<UrgeSessionLog> urgeSessions,
+  ) {
+    final counts = <String, int>{};
+
+    for (final session in urgeSessions) {
+      final key = session.selectedScriptId.trim();
+      if (key.isEmpty) {
+        continue;
+      }
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+
+    if (counts.isEmpty) {
+      return const <PatternBarPoint>[];
+    }
+
+    final sorted = counts.entries.toList()
+      ..sort((a, b) {
+        final diff = b.value.compareTo(a.value);
+        if (diff != 0) {
+          return diff;
+        }
+        return a.key.toLowerCase().compareTo(b.key.toLowerCase());
+      });
+
+    return sorted.take(4).map((entry) {
+      return PatternBarPoint(
+        label: _scriptLabel(entry.key),
+        value: entry.value.toDouble(),
+        topLabel: '${entry.value}',
+      );
+    }).toList();
+  }
+
+  static List<PatternBarPoint> cycleOutcomePoints({
+    required List<PurchaseLog> purchaseLogs,
+    required List<UrgeSessionLog> urgeSessions,
+  }) {
+    final slipCount = purchaseLogs.length;
+    final urgeWinCount = urgeSessions.length;
+    final copingCount = urgeSessions
+        .where((session) => session.usedCopingStrategies)
+        .length;
+    final supportCount = urgeSessions
+        .where((session) => session.usedAccountability)
+        .length;
+
+    return [
+      PatternBarPoint(
+        label: 'Slips',
+        value: slipCount.toDouble(),
+        topLabel: slipCount > 0 ? '$slipCount' : '',
+      ),
+      PatternBarPoint(
+        label: 'Wins',
+        value: urgeWinCount.toDouble(),
+        topLabel: urgeWinCount > 0 ? '$urgeWinCount' : '',
+      ),
+      PatternBarPoint(
+        label: 'Coping',
+        value: copingCount.toDouble(),
+        topLabel: copingCount > 0 ? '$copingCount' : '',
+      ),
+      PatternBarPoint(
+        label: 'Support',
+        value: supportCount.toDouble(),
+        topLabel: supportCount > 0 ? '$supportCount' : '',
+      ),
+    ];
+  }
+
   static PatternBarPoint _point(String label, int count) {
     return PatternBarPoint(
       label: label,
