@@ -272,6 +272,54 @@ class PatternChartService {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
+  static String _compactPhrase(String raw) {
+    final words = raw
+        .split(RegExp(r'[\s/_-]+'))
+        .where((word) => word.trim().isNotEmpty)
+        .toList();
+
+    if (words.isEmpty) {
+      return 'Other';
+    }
+
+    final first = words.first;
+    final normalized = _titleCase(first);
+    return normalized.length <= 8
+        ? normalized
+        : normalized.substring(0, 8);
+  }
+
+  static String _scriptLabel(String raw) {
+    final words = raw
+        .split(RegExp(r'[\s/_-]+'))
+        .where((word) => word.trim().isNotEmpty)
+        .where(
+          (word) =>
+              word.toLowerCase() != 'script' &&
+              word.toLowerCase() != 'urge' &&
+              word.toLowerCase() != 'mode',
+        )
+        .toList();
+
+    if (words.isEmpty) {
+      return 'Other';
+    }
+
+    final normalized = _titleCase(words.first);
+    return normalized.length <= 8
+        ? normalized
+        : normalized.substring(0, 8);
+  }
+
+  static String _titleCase(String raw) {
+    if (raw.isEmpty) {
+      return raw;
+    }
+
+    final lower = raw.toLowerCase();
+    return lower[0].toUpperCase() + lower.substring(1);
+  }
+
   static String _weekdayShort(int weekday) {
     switch (weekday) {
       case DateTime.monday:
