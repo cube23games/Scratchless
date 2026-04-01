@@ -8,6 +8,7 @@ import '../../core/models/risky_place.dart';
 import '../../core/models/reminder_settings.dart';
 import '../../core/models/spend_cap_plan.dart';
 import '../../core/models/stop_reason.dart';
+import '../../core/models/urge_session_log.dart';
 import '../../core/models/weekly_reflection_archive_item.dart';
 import '../../core/services/milestone_service.dart';
 import '../../core/services/risky_time_service.dart';
@@ -37,6 +38,7 @@ class HomeShell extends StatefulWidget {
   final double monthlySpendEstimate;
   final String goal;
   final List<PurchaseLog> logs;
+  final List<UrgeSessionLog> urgeSessions;
   final ReminderSettings reminderSettings;
   final WeeklySummary weeklySummary;
   final PremiumState premiumState;
@@ -84,6 +86,7 @@ class HomeShell extends StatefulWidget {
     required this.monthlySpendEstimate,
     required this.goal,
     required this.logs,
+    required this.urgeSessions,
     required this.reminderSettings,
     required this.weeklySummary,
     required this.premiumState,
@@ -271,6 +274,7 @@ class _HomeShellState extends State<HomeShell> {
       ),
       StatsScreen(
         logs: widget.logs,
+        urgeSessions: widget.urgeSessions,
         currentStreakDays: widget.currentStreakDays,
         bestStreakDays: widget.bestStreakDays,
         averageSpend: widget.averageSpend,

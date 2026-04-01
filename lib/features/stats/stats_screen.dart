@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../../app/app_theme.dart';
 import '../../core/models/premium_state.dart';
 import '../../core/models/purchase_log.dart';
+import '../../core/models/urge_session_log.dart';
 import '../../core/models/weekly_reflection_archive_item.dart';
 import '../../core/services/feature_gate_service.dart';
+import '../../core/services/pattern_chart_service.dart';
 import '../../core/services/trigger_insight_service.dart';
 import '../../core/services/weekly_summary_service.dart';
 import '../../features/converter/money_converter_screen.dart';
@@ -17,10 +19,47 @@ import '../../features/premium/weekly_reflection_screen.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 import '../logging/purchase_log_sheet.dart';
+import 'widgets/pattern_charts.dart';
 import 'widgets/simple_spend_chart.dart';
+
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const _LegendDot({
+    required this.color,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppTheme.mutedText,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class StatsScreen extends StatelessWidget {
   final List<PurchaseLog> logs;
+  final List<UrgeSessionLog> urgeSessions;
   final int currentStreakDays;
   final int bestStreakDays;
   final double averageSpend;
@@ -38,6 +77,7 @@ class StatsScreen extends StatelessWidget {
   const StatsScreen({
     super.key,
     required this.logs,
+    required this.urgeSessions,
     required this.currentStreakDays,
     required this.bestStreakDays,
     required this.averageSpend,
@@ -151,6 +191,155 @@ class StatsScreen extends StatelessWidget {
           totalLogged: totalSpent,
         ),
       ),
+    );
+  }
+
+  Widget _buildPatternChartsSection(BuildContext context) {
+    if (!FeatureGateService.advancedInsightsUnlocked(premiumState)) {
+      return AppCard(
+        onTap: () => _openPremiumScreen(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'Visual pattern charts',
+              style: TextStyle(
+                color: AppTheme.mutedText,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Unlock deeper visuals for time-of-day risk, day-of-week patterns, and urge wins vs purchases.',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Premium charts help you see routines, harder windows, and recovery effort instead of relying on memory alone.',
+              style: TextStyle(
+                color: AppTheme.mutedText,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final timeOfDayPoints = PatternChartService.timeOfDayPoints(logs);
+    final dayOfWeekPoints = PatternChartService.dayOfWeekPoints(logs);
+    final urgeVsPurchasePoints = PatternChartService.urgeWinsVsPurchasePoints(
+      purchaseLogs: logs,
+      urgeSessions: urgeSessions,
+    );
+
+    return Column(
+      children: [
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Time-of-day risk',
+                style: TextStyle(
+                  color: AppTheme.mutedText,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'See when logged purchases tend to cluster.',
+                style: TextStyle(
+                  color: AppTheme.mutedText,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 140,
+                child: PatternBarChart(
+                  points: timeOfDayPoints,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Day-of-week pattern',
+                style: TextStyle(
+                  color: AppTheme.mutedText,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Routine gets more honest when you can see it.',
+                style: TextStyle(
+                  color: AppTheme.mutedText,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 140,
+                child: PatternBarChart(
+                  points: dayOfWeekPoints,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Urge wins vs purchases',
+                style: TextStyle(
+                  color: AppTheme.mutedText,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Recovery effort counts too.',
+                style: TextStyle(
+                  color: AppTheme.mutedText,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: const [
+                  _LegendDot(color: AppTheme.accent, label: 'Purchases'),
+                  SizedBox(width: 16),
+                  _LegendDot(color: Colors.white70, label: 'Urge wins'),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 150,
+                child: DualPatternBarChart(
+                  points: urgeVsPurchasePoints,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -320,6 +509,8 @@ class StatsScreen extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 12),
+          _buildPatternChartsSection(context),
           const SizedBox(height: 12),
           AppCard(
             onTap: () {
