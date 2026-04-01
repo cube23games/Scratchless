@@ -7,6 +7,7 @@ import '../../core/models/urge_session_log.dart';
 import '../../core/models/weekly_reflection_archive_item.dart';
 import '../../core/services/feature_gate_service.dart';
 import '../../core/services/pattern_chart_service.dart';
+import '../../core/services/risky_time_service.dart';
 import '../../core/services/trigger_insight_service.dart';
 import '../../core/services/weekly_summary_service.dart';
 import '../../features/converter/money_converter_screen.dart';
@@ -21,6 +22,65 @@ import '../../shared/widgets/app_card.dart';
 import '../logging/purchase_log_sheet.dart';
 import 'widgets/pattern_charts.dart';
 import 'widgets/simple_spend_chart.dart';
+
+class _SignalMeter extends StatelessWidget {
+  final WarningSignalPoint point;
+
+  const _SignalMeter({
+    required this.point,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  point.label,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                point.status,
+                style: const TextStyle(
+                  color: AppTheme.mutedText,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 10,
+              value: point.score.clamp(0.0, 1.0),
+              backgroundColor: Colors.white.withOpacity(0.08),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            point.detail,
+            style: const TextStyle(
+              color: AppTheme.mutedText,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _LegendDot extends StatelessWidget {
   final Color color;
@@ -425,6 +485,8 @@ class StatsScreen extends StatelessWidget {
     );
   }
 
+
+
   Widget _buildCycleSection(BuildContext context) {
     if (!FeatureGateService.advancedInsightsUnlocked(premiumState)) {
       return AppCard(
@@ -566,6 +628,85 @@ class StatsScreen extends StatelessWidget {
                 points: outcomePoints,
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWarningRadarSection(BuildContext context) {
+    if (!FeatureGateService.advancedInsightsUnlocked(premiumState)) {
+      return AppCard(
+        onTap: () => _openPremiumScreen(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'Warning-sign radar',
+              style: TextStyle(
+                color: AppTheme.mutedText,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Unlock a compact radar view that shows where pressure is building and where recovery is holding.',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Premium radar helps turn scattered signals into a quick read on timing, triggers, slips, and recovery.',
+              style: TextStyle(
+                color: AppTheme.mutedText,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final riskyTimeInsight = RiskyTimeService.build(logs: logs);
+    final radarReport = PatternChartService.buildWarningRadar(
+      purchaseLogs: logs,
+      urgeSessions: urgeSessions,
+      hasRiskyTimePattern: riskyTimeInsight.hasEnoughData,
+      riskyWindowLabel: riskyTimeInsight.windowLabel,
+    );
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Warning-sign radar',
+            style: TextStyle(
+              color: AppTheme.mutedText,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'A quick read on where pressure is building and where recovery is holding.',
+            style: TextStyle(
+              color: AppTheme.mutedText,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 14),
+          ...radarReport.points.map((point) => _SignalMeter(point: point)),
+          const SizedBox(height: 2),
+          Text(
+            radarReport.summary,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -743,6 +884,8 @@ class StatsScreen extends StatelessWidget {
           _buildSlipRecoverySection(context),
           const SizedBox(height: 12),
           _buildCycleSection(context),
+          const SizedBox(height: 12),
+          _buildWarningRadarSection(context),
           const SizedBox(height: 12),
           AppCard(
             onTap: () {

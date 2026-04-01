@@ -27,6 +27,30 @@ class DualPatternBarPoint {
   });
 }
 
+class WarningSignalPoint {
+  final String label;
+  final double score;
+  final String status;
+  final String detail;
+
+  const WarningSignalPoint({
+    required this.label,
+    required this.score,
+    required this.status,
+    required this.detail,
+  });
+}
+
+class WarningRadarReport {
+  final List<WarningSignalPoint> points;
+  final String summary;
+
+  const WarningRadarReport({
+    required this.points,
+    required this.summary,
+  });
+}
+
 class PatternChartService {
   static List<PatternBarPoint> timeOfDayPoints(
     List<PurchaseLog> logs,
@@ -256,6 +280,145 @@ class PatternChartService {
     ];
   }
 
+  static WarningRadarReport buildWarningRadar({
+    required List<PurchaseLog> purchaseLogs,
+    required List<UrgeSessionLog> urgeSessions,
+    required bool hasRiskyTimePattern,
+    required String riskyWindowLabel,
+  }) {
+    final timeSignal = WarningSignalPoint(
+      label: 'Time pressure',
+      score: hasRiskyTimePattern ? 0.85 : (purchaseLogs.length >= 3 ? 0.35 : 0.15),
+      status: hasRiskyTimePattern ? 'Pattern found' : 'Still forming',
+      detail: hasRiskyTimePattern
+          ? 'Your logs lean toward $riskyWindowLabel.'
+          : 'No strong harder window has formed yet.',
+    );
+
+    final tagCounts = <String, int>{};
+    for (final log in purchaseLogs) {
+      for (final rawTag in log.tags) {
+        final tag = rawTag.trim();
+        if (tag.isEmpty) {
+          continue;
+        }
+        tagCounts[tag] = (tagCounts[tag] ?? 0) + 1;
+      }
+    }
+
+    WarningSignalPoint triggerSignal;
+    String topTriggerLabel = 'mixed pressure';
+
+    if (tagCounts.isEmpty) {
+      triggerSignal = const WarningSignalPoint(
+        label: 'Trigger concentration',
+        score: 0.15,
+        status: 'Need more tags',
+        detail: 'Tag purchases to make trigger pressure clearer.',
+      );
+    } else {
+      final sortedTags = tagCounts.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      final top = sortedTags.first;
+      final total = tagCounts.values.fold<int>(0, (sum, value) => sum + value);
+      final concentration = total <= 0 ? 0.0 : top.value / total;
+      topTriggerLabel = _compactPhrase(top.key).toLowerCase();
+
+      triggerSignal = WarningSignalPoint(
+        label: 'Trigger concentration',
+        score: concentration.clamp(0.15, 1.0),
+        status: concentration >= 0.55
+            ? 'One trigger dominates'
+            : concentration >= 0.35
+                ? 'Some clustering'
+                : 'Mixed triggers',
+        detail: 'Top trigger: ${_compactPhrase(top.key)}.',
+      );
+    }
+
+    final today = _dateOnly(DateTime.now());
+    final startDay = today.subtract(const Duration(days: 13));
+    final dailyPurchaseCounts = <DateTime, int>{};
+
+    for (final log in purchaseLogs) {
+      final day = _dateOnly(log.createdAt);
+      if (!_isBefore(day, startDay) && !_isAfter(day, today)) {
+        dailyPurchaseCounts[day] = (dailyPurchaseCounts[day] ?? 0) + 1;
+      }
+    }
+
+    final slipDays = dailyPurchaseCounts.values.where((count) => count >= 1).length;
+    final repeatSlipDays = dailyPurchaseCounts.values.where((count) => count >= 2).length;
+
+    final slipScore = repeatSlipDays > 0
+        ? (repeatSlipDays / 4).clamp(0.0, 1.0)
+        : (slipDays > 0 ? 0.35 : 0.10);
+
+    final slipSignal = WarningSignalPoint(
+      label: 'Slip pressure',
+      score: slipScore,
+      status: repeatSlipDays > 0
+          ? 'Repeat-slip pressure'
+          : slipDays > 0
+              ? 'Some slip pressure'
+              : 'Quiet right now',
+      detail: repeatSlipDays > 0
+          ? '$repeatSlipDays repeat-slip day${repeatSlipDays == 1 ? '' : 's'} in the last 14 days.'
+          : slipDays > 0
+              ? '$slipDays slip day${slipDays == 1 ? '' : 's'} in the last 14 days.'
+              : 'No recent slip days logged.',
+    );
+
+    final urgeWinDays = urgeSessions
+        .map((session) => _dateOnly(session.completedAt))
+        .where((day) => !_isBefore(day, startDay) && !_isAfter(day, today))
+        .toSet()
+        .length;
+
+    int recoveryDays = 0;
+    for (final day in dailyPurchaseCounts.keys) {
+      final nextDay = day.add(const Duration(days: 1));
+      final nextCount = dailyPurchaseCounts[nextDay] ?? 0;
+      if (nextCount == 0) {
+        recoveryDays += 1;
+      }
+    }
+
+    final recoveryScore = slipDays == 0
+        ? (urgeWinDays > 0 ? 0.75 : 0.30)
+        : ((recoveryDays + urgeWinDays) / (slipDays + urgeWinDays + 1))
+            .clamp(0.0, 1.0);
+
+    final recoverySignal = WarningSignalPoint(
+      label: 'Recovery strength',
+      score: recoveryScore,
+      status: recoveryScore >= 0.66
+          ? 'Comebacks visible'
+          : recoveryScore >= 0.40
+              ? 'Still building'
+              : 'Needs reinforcement',
+      detail: recoveryDays > 0
+          ? '$recoveryDays comeback day${recoveryDays == 1 ? '' : 's'} after a slip recently.'
+          : urgeWinDays > 0
+              ? '$urgeWinDays urge-win day${urgeWinDays == 1 ? '' : 's'} logged recently.'
+              : 'Recovery momentum is still building.',
+    );
+
+    final summary =
+        'Right now the cycle leans toward ${hasRiskyTimePattern ? riskyWindowLabel.toLowerCase() : 'less consistent timing'}, '
+        '$topTriggerLabel, ${slipSignal.status.toLowerCase()}, and recovery is ${recoverySignal.status.toLowerCase()}.';
+
+    return WarningRadarReport(
+      points: [
+        timeSignal,
+        triggerSignal,
+        slipSignal,
+        recoverySignal,
+      ],
+      summary: summary,
+    );
+  }
+
   static PatternBarPoint _point(String label, int count) {
     return PatternBarPoint(
       label: label,
@@ -270,6 +433,18 @@ class PatternChartService {
 
   static bool _sameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  static bool _isBefore(DateTime a, DateTime b) {
+    return a.year < b.year ||
+        (a.year == b.year && a.month < b.month) ||
+        (a.year == b.year && a.month == b.month && a.day < b.day);
+  }
+
+  static bool _isAfter(DateTime a, DateTime b) {
+    return a.year > b.year ||
+        (a.year == b.year && a.month > b.month) ||
+        (a.year == b.year && a.month == b.month && a.day > b.day);
   }
 
   static String _compactPhrase(String raw) {
