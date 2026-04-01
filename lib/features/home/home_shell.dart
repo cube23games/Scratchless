@@ -58,6 +58,7 @@ class HomeShell extends StatefulWidget {
       onEditPurchase;
   final void Function(String id) onDeletePurchase;
   final VoidCallback onCompleteUrgeSession;
+  final ValueChanged<UrgeSessionLog> onCompleteDetailedUrgeSession;
   final ValueChanged<ReminderSettings> onUpdateReminderSettings;
   final VoidCallback onStartPremiumTrial;
   final bool shouldShowSuccessPremiumPrompt;
@@ -104,6 +105,7 @@ class HomeShell extends StatefulWidget {
     required this.onEditPurchase,
     required this.onDeletePurchase,
     required this.onCompleteUrgeSession,
+    required this.onCompleteDetailedUrgeSession,
     required this.onUpdateReminderSettings,
     required this.onStartPremiumTrial,
     required this.shouldShowSuccessPremiumPrompt,
@@ -258,6 +260,8 @@ class _HomeShellState extends State<HomeShell> {
         onEditPurchase: widget.onEditPurchase,
         onDeletePurchase: widget.onDeletePurchase,
         onCompleteUrgeSession: widget.onCompleteUrgeSession,
+        onCompleteDetailedUrgeSession:
+            widget.onCompleteDetailedUrgeSession,
         onStartPremiumTrial: widget.onStartPremiumTrial,
         shouldShowSuccessPremiumPrompt: widget.shouldShowSuccessPremiumPrompt,
         onAcknowledgeSuccessPremiumPrompt:

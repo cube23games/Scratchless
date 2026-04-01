@@ -248,8 +248,26 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
       _urgesDefeated += 1;
       _urgeSessions = <UrgeSessionLog>[
         UrgeSessionLog(
+          startedAt: DateTime.now(),
           completedAt: DateTime.now(),
+          selectedScriptId: 'pre_store_mode',
+          openedFullUrgeScript: false,
+          usedCopingStrategies: false,
+          usedNearMissEducation: false,
+          usedAccountability: false,
         ),
+        ..._urgeSessions,
+      ];
+    });
+
+    _persistState();
+  }
+
+  void _completeDetailedUrgeSession(UrgeSessionLog session) {
+    setState(() {
+      _urgesDefeated += 1;
+      _urgeSessions = <UrgeSessionLog>[
+        session,
         ..._urgeSessions,
       ];
     });
@@ -474,6 +492,8 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
                   onEditPurchase: _editPurchase,
                   onDeletePurchase: _deletePurchase,
                   onCompleteUrgeSession: _completeUrgeSession,
+                  onCompleteDetailedUrgeSession:
+                      _completeDetailedUrgeSession,
                   onUpdateReminderSettings: _updateReminderSettings,
                   onStartPremiumTrial: _startPremiumTrial,
                   shouldShowSuccessPremiumPrompt:

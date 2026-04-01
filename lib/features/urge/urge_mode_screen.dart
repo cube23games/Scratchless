@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/app_theme.dart';
 import '../../core/models/accountability_partner.dart';
 import '../../core/models/stop_reason.dart';
+import '../../core/models/urge_session_log.dart';
 import '../../core/services/accountability_message_service.dart';
 import '../../core/services/money_converter_service.dart';
 import '../../core/services/urge_script_service.dart';
@@ -15,7 +16,7 @@ import 'urge_scripts_screen.dart';
 
 class UrgeModeScreen extends StatefulWidget {
   final double averageSpend;
-  final VoidCallback onComplete;
+  final ValueChanged<UrgeSessionLog> onComplete;
   final VoidCallback onStartPremiumTrial;
   final bool shouldShowSuccessPremiumPrompt;
   final VoidCallback onAcknowledgeSuccessPremiumPrompt;
@@ -48,9 +49,14 @@ class UrgeModeScreen extends StatefulWidget {
 }
 
 class _UrgeModeScreenState extends State<UrgeModeScreen> {
+  final DateTime _openedAt = DateTime.now();
   int _secondsLeft = 20;
   bool _completed = false;
   String _selectedScriptId = UrgeScriptService.defaultScript.id;
+  bool _openedFullUrgeScript = false;
+  bool _usedCopingStrategies = false;
+  bool _usedNearMissEducation = false;
+  bool _usedAccountability = false;
 
   static const List<String> _starterReasons = <String>[
     'I want to keep more money for real life.',
@@ -113,6 +119,10 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
   }
 
   void _openUrgeScripts() {
+    setState(() {
+      _openedFullUrgeScript = true;
+    });
+
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => UrgeScriptsScreen(
@@ -120,6 +130,27 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
         ),
       ),
     );
+  }
+
+  void _openCopingStrategies() {
+    setState(() {
+      _usedCopingStrategies = true;
+    });
+    widget.onOpenCopingStrategies();
+  }
+
+  void _openNearMissEducation() {
+    setState(() {
+      _usedNearMissEducation = true;
+    });
+    widget.onOpenNearMissEducation();
+  }
+
+  void _openAccountability() {
+    setState(() {
+      _usedAccountability = true;
+    });
+    widget.onOpenAccountability();
   }
 
   Future<void> _handleComplete() async {
@@ -131,9 +162,22 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
       _completed = true;
     });
 
-    widget.onComplete();
+    final completedAt = DateTime.now();
+
+    widget.onComplete(
+      UrgeSessionLog(
+        startedAt: _openedAt,
+        completedAt: completedAt,
+        selectedScriptId: _selectedScriptId,
+        openedFullUrgeScript: _openedFullUrgeScript,
+        usedCopingStrategies: _usedCopingStrategies,
+        usedNearMissEducation: _usedNearMissEducation,
+        usedAccountability: _usedAccountability,
+      ),
+    );
 
     if (!widget.shouldShowSuccessPremiumPrompt || !mounted) {
+      Navigator.of(context).pop(true);
       return;
     }
 
@@ -179,14 +223,10 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
 
     if (wantsPremium) {
       widget.onStartPremiumTrial();
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        const SnackBar(
-          content: Text('Premium unlocked. Build on this win.'),
-        ),
-      );
+    }
+
+    if (mounted) {
+      Navigator.of(context).pop(true);
     }
   }
 
@@ -378,7 +418,7 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
                     label: 'Set up accountability',
                     icon: Icons.person_add_alt_1_rounded,
                     isPrimary: false,
-                    onPressed: widget.onOpenAccountability,
+                    onPressed: _openAccountability,
                   ),
                 ] else ...[
                   Text(
@@ -405,6 +445,9 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
                         : 'Copy support request',
                     icon: Icons.support_agent_rounded,
                     onPressed: () {
+                      setState(() {
+                        _usedAccountability = true;
+                      });
                       if (hasPhone) {
                         _sendSmsOrCopy(
                           phone: widget.accountabilityPartner.phone!,
@@ -426,6 +469,9 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
                     icon: Icons.sms_rounded,
                     isPrimary: false,
                     onPressed: () {
+                      setState(() {
+                        _usedAccountability = true;
+                      });
                       if (hasPhone) {
                         _sendSmsOrCopy(
                           phone: widget.accountabilityPartner.phone!,
@@ -445,7 +491,7 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: TextButton(
-                      onPressed: widget.onOpenAccountability,
+                      onPressed: _openAccountability,
                       child: const Text('Open full accountability tools'),
                     ),
                   ),
@@ -571,7 +617,7 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
                   label: 'Open near-miss explainer',
                   icon: Icons.lightbulb_rounded,
                   isPrimary: false,
-                  onPressed: widget.onOpenNearMissEducation,
+                  onPressed: _openNearMissEducation,
                 ),
               ],
             ),
@@ -602,7 +648,7 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
                   label: 'Open coping strategies',
                   icon: Icons.psychology_rounded,
                   isPrimary: false,
-                  onPressed: widget.onOpenCopingStrategies,
+                  onPressed: _openCopingStrategies,
                 ),
               ],
             ),

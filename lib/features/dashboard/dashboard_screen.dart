@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/app_theme.dart';
 import '../../core/models/accountability_partner.dart';
 import '../../core/models/purchase_log.dart';
+import '../../core/models/urge_session_log.dart';
 import '../../core/models/spend_cap_plan.dart';
 import '../../core/models/stop_reason.dart';
 import '../../core/services/milestone_service.dart';
@@ -39,6 +40,7 @@ class DashboardScreen extends StatelessWidget {
       onEditPurchase;
   final void Function(String id) onDeletePurchase;
   final VoidCallback onCompleteUrgeSession;
+  final ValueChanged<UrgeSessionLog> onCompleteDetailedUrgeSession;
   final VoidCallback onStartPremiumTrial;
   final bool shouldShowSuccessPremiumPrompt;
   final VoidCallback onAcknowledgeSuccessPremiumPrompt;
@@ -73,6 +75,7 @@ class DashboardScreen extends StatelessWidget {
     required this.onEditPurchase,
     required this.onDeletePurchase,
     required this.onCompleteUrgeSession,
+    required this.onCompleteDetailedUrgeSession,
     required this.onStartPremiumTrial,
     required this.shouldShowSuccessPremiumPrompt,
     required this.onAcknowledgeSuccessPremiumPrompt,
@@ -382,12 +385,12 @@ class DashboardScreen extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           PrimaryUrgeButton(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
+            onPressed: () async {
+              final completed = await Navigator.of(context).push<bool>(
+                MaterialPageRoute<bool>(
                   builder: (_) => UrgeModeScreen(
                     averageSpend: averageSpend,
-                    onComplete: onCompleteUrgeSession,
+                    onComplete: onCompleteDetailedUrgeSession,
                     onStartPremiumTrial: onStartPremiumTrial,
                     shouldShowSuccessPremiumPrompt:
                         shouldShowSuccessPremiumPrompt,
@@ -403,6 +406,14 @@ class DashboardScreen extends StatelessWidget {
                   ),
                 ),
               );
+
+              if (completed == true && context.mounted) {
+                ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                  const SnackBar(
+                    content: Text('Nice save — urge interrupted.'),
+                  ),
+                );
+              }
             },
           ),
           const SizedBox(height: 14),
