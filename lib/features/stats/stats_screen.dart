@@ -194,6 +194,86 @@ class StatsScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildSlipRecoverySection(BuildContext context) {
+    if (!FeatureGateService.advancedInsightsUnlocked(premiumState)) {
+      return AppCard(
+        onTap: () => _openPremiumScreen(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'Slip recovery',
+              style: TextStyle(
+                color: AppTheme.mutedText,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Unlock recovery visuals that show whether a slip turned into a spiral or a comeback.',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Premium recovery charts help reframe progress around how fast you return, not just whether you slipped.',
+              style: TextStyle(
+                color: AppTheme.mutedText,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final slipRecoveryPoints = PatternChartService.slipRecoveryPoints(
+      purchaseLogs: logs,
+    );
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Slip recovery',
+            style: TextStyle(
+              color: AppTheme.mutedText,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Did a slip spiral, or did you come back the next day?',
+            style: TextStyle(
+              color: AppTheme.mutedText,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: const [
+              _LegendDot(color: AppTheme.accent, label: 'Slip day'),
+              SizedBox(width: 16),
+              _LegendDot(color: Colors.white70, label: 'Recovery day'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 150,
+            child: DualPatternBarChart(
+              points: slipRecoveryPoints,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPatternChartsSection(BuildContext context) {
     if (!FeatureGateService.advancedInsightsUnlocked(premiumState)) {
       return AppCard(
@@ -511,6 +591,8 @@ class StatsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _buildPatternChartsSection(context),
+          const SizedBox(height: 12),
+          _buildSlipRecoverySection(context),
           const SizedBox(height: 12),
           AppCard(
             onTap: () {

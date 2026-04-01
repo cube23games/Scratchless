@@ -108,6 +108,45 @@ class PatternChartService {
     });
   }
 
+  static List<DualPatternBarPoint> slipRecoveryPoints({
+    required List<PurchaseLog> purchaseLogs,
+    DateTime? now,
+  }) {
+    final today = _dateOnly(now ?? DateTime.now());
+
+    return List<DualPatternBarPoint>.generate(7, (index) {
+      final day = today.subtract(Duration(days: 6 - index));
+      final previousDay = day.subtract(const Duration(days: 1));
+
+      final purchaseCount = purchaseLogs.where((log) {
+        final logDay = _dateOnly(log.createdAt);
+        return _sameDay(logDay, day);
+      }).length;
+
+      final previousPurchaseCount = purchaseLogs.where((log) {
+        final logDay = _dateOnly(log.createdAt);
+        return _sameDay(logDay, previousDay);
+      }).length;
+
+      final slipDay = purchaseCount > 0 ? 1.0 : 0.0;
+      final recoveryDay =
+          previousPurchaseCount > 0 && purchaseCount == 0 ? 1.0 : 0.0;
+
+      return DualPatternBarPoint(
+        label: _weekdayShort(day.weekday),
+        leftValue: slipDay,
+        rightValue: recoveryDay,
+        topLabel: purchaseCount > 1
+            ? 'Repeat'
+            : purchaseCount == 1
+                ? 'Slip'
+                : recoveryDay > 0
+                    ? 'Back'
+                    : '',
+      );
+    });
+  }
+
   static PatternBarPoint _point(String label, int count) {
     return PatternBarPoint(
       label: label,
