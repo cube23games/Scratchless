@@ -456,6 +456,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
                   monthlySpendEstimate: _monthlySpendEstimate,
                   goal: _goal,
                   logs: _logs,
+                  urgeSessions: _urgeSessions,
                   reminderSettings: _reminderSettings,
                   weeklySummary: _weeklySummary,
                   premiumState: _premiumState,
