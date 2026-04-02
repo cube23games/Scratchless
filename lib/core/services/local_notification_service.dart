@@ -4,6 +4,7 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../models/reminder_settings.dart';
+import 'risky_time_service.dart';
 
 class LocalNotificationService {
   LocalNotificationService._();
@@ -13,6 +14,7 @@ class LocalNotificationService {
 
   static const int _dailyCheckInId = 1001;
   static const int _eveningSupportId = 1002;
+  static const int _riskyTimeWarningId = 1003;
 
   static const String _channelId = 'scratchless_support';
   static const String _channelName = 'ScratchLess Support';
@@ -63,12 +65,22 @@ class LocalNotificationService {
     _initialized = true;
   }
 
-  Future<void> syncReminderSettings(ReminderSettings settings) async {
+  Future<void> syncReminderSettings(
+    ReminderSettings settings, {
+    RiskyTimeInsight? riskyTimeInsight,
+  }) async {
     await initialize();
     await cancelAllReminderNotifications();
 
+    final shouldScheduleRiskyTime =
+        settings.habitTimeWarningsEnabled &&
+        riskyTimeInsight != null &&
+        riskyTimeInsight.hasEnoughData &&
+        riskyTimeInsight.anchorHour != null;
+
     if (!settings.dailyCheckInEnabled &&
-        !settings.eveningSupportEnabled) {
+        !settings.eveningSupportEnabled &&
+        !shouldScheduleRiskyTime) {
       return;
     }
 
@@ -84,11 +96,16 @@ class LocalNotificationService {
     if (settings.eveningSupportEnabled) {
       await _scheduleEveningSupport();
     }
+
+    if (shouldScheduleRiskyTime) {
+      await _scheduleRiskyTimeWarning(riskyTimeInsight.anchorHour!);
+    }
   }
 
   Future<void> cancelAllReminderNotifications() async {
     await _plugin.cancel(_dailyCheckInId);
     await _plugin.cancel(_eveningSupportId);
+    await _plugin.cancel(_riskyTimeWarningId);
   }
 
   Future<bool?> _requestNotificationPermission() async {

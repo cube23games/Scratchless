@@ -155,6 +155,8 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
       _hasSeenSuccessPremiumPrompt = stored.hasSeenSuccessPremiumPrompt;
       _milestoneState = stored.milestoneState;
     });
+
+    _syncReminderNotifications();
   }
 
   Future<void> _persistState() async {
@@ -181,6 +183,13 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     );
   }
 
+  void _syncReminderNotifications() {
+    LocalNotificationService.instance.syncReminderSettings(
+      _reminderSettings,
+      riskyTimeInsight: _riskyTimeInsight,
+    );
+  }
+
   void _completeOnboarding(OnboardingResult result) {
     setState(() {
       _isOnboarded = true;
@@ -191,6 +200,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     });
 
     _persistState();
+    _syncReminderNotifications();
   }
 
   void _logPurchase(double amount, String? note, List<String> tags) {
@@ -232,6 +242,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     });
 
     _persistState();
+    _syncReminderNotifications();
   }
 
   void _deletePurchase(String id) {
@@ -241,6 +252,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     });
 
     _persistState();
+    _syncReminderNotifications();
   }
 
   void _completeUrgeSession() {
@@ -281,7 +293,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     });
 
     _persistState();
-    LocalNotificationService.instance.syncReminderSettings(settings);
+    _syncReminderNotifications();
   }
 
   void _startPremiumTrial() {
