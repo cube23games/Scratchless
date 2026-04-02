@@ -144,6 +144,22 @@ class LocalNotificationService {
     );
   }
 
+  Future<void> _scheduleRiskyTimeWarning(int anchorHour) async {
+    final scheduledHour = (anchorHour + 23) % 24;
+
+    await _plugin.zonedSchedule(
+      _riskyTimeWarningId,
+      'Harder window ahead',
+      'This is one of your riskier times. Open ScratchLess before the usual stop.',
+      _nextInstanceOfTime(scheduledHour, 0),
+      _notificationDetails(),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
   NotificationDetails _notificationDetails() {
     return const NotificationDetails(
       android: AndroidNotificationDetails(
