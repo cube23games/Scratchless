@@ -224,9 +224,16 @@ class _EditRiskyPlaceScreen extends StatefulWidget {
 }
 
 class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
+  static const List<_RadiusPreset> _radiusPresets = <_RadiusPreset>[
+    _RadiusPreset(label: 'Small', meters: 150),
+    _RadiusPreset(label: 'Medium', meters: 300),
+    _RadiusPreset(label: 'Large', meters: 500),
+  ];
+
   late final TextEditingController _labelController;
   late final TextEditingController _noteController;
   late bool _isTopRisk;
+  late int _radiusMeters;
 
   bool get _isEditing => widget.initialPlace != null;
 
@@ -240,6 +247,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
       text: widget.initialPlace?.note ?? '',
     );
     _isTopRisk = widget.initialPlace?.isTopRisk ?? false;
+    _radiusMeters = widget.initialPlace?.radiusMeters ?? 300;
   }
 
   @override
@@ -268,6 +276,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
       label: label,
       note: note,
       isTopRisk: _isTopRisk,
+      radiusMeters: _radiusMeters,
     );
 
     Navigator.of(context).pop(
@@ -327,7 +336,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
             controller: _labelController,
             decoration: const InputDecoration(
               labelText: 'Place name',
-              hintText: 'Gas station by work',
+              hintText: 'Gas station by work or store near home',
             ),
           ),
           const SizedBox(height: 12),
@@ -336,7 +345,47 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
             maxLines: 3,
             decoration: const InputDecoration(
               labelText: 'Optional note',
-              hintText: 'Usually risky after payday or after work.',
+              hintText: 'Usually risky after payday, after work, or when I feel stressed.',
+            ),
+          ),
+          const SizedBox(height: 12),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Future smart place-alert radius',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'This does not trigger location alerts yet. It sets up the distance you may want later for smarter place warnings.',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: _radiusPresets.map((preset) {
+                    return ChoiceChip(
+                      label: Text('${preset.label} • ${preset.meters}m'),
+                      selected: _radiusMeters == preset.meters,
+                      onSelected: (_) {
+                        setState(() {
+                          _radiusMeters = preset.meters;
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 12),
@@ -344,7 +393,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
             contentPadding: EdgeInsets.zero,
             title: const Text('Mark as top risk'),
             subtitle: const Text(
-              'Use this for the place most likely to pull you into a ticket purchase.',
+              'Use this for the stop most likely to turn into an automatic ticket purchase.',
             ),
             value: _isTopRisk,
             onChanged: (value) {
@@ -374,6 +423,16 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
       ),
     );
   }
+}
+
+class _RadiusPreset {
+  final String label;
+  final int meters;
+
+  const _RadiusPreset({
+    required this.label,
+    required this.meters,
+  });
 }
 
 class _EditRiskyPlaceResult {

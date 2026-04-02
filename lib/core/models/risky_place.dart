@@ -3,12 +3,14 @@ class RiskyPlace {
   final String label;
   final String note;
   final bool isTopRisk;
+  final int radiusMeters;
 
   const RiskyPlace({
     required this.id,
     required this.label,
     required this.note,
     required this.isTopRisk,
+    required this.radiusMeters,
   });
 
   RiskyPlace copyWith({
@@ -16,12 +18,14 @@ class RiskyPlace {
     String? label,
     String? note,
     bool? isTopRisk,
+    int? radiusMeters,
   }) {
     return RiskyPlace(
       id: id ?? this.id,
       label: label ?? this.label,
       note: note ?? this.note,
       isTopRisk: isTopRisk ?? this.isTopRisk,
+      radiusMeters: radiusMeters ?? this.radiusMeters,
     );
   }
 
@@ -31,6 +35,7 @@ class RiskyPlace {
       'label': label,
       'note': note,
       'isTopRisk': isTopRisk,
+      'radiusMeters': radiusMeters,
     };
   }
 
@@ -40,6 +45,7 @@ class RiskyPlace {
       label: json['label']?.toString() ?? '',
       note: json['note']?.toString() ?? '',
       isTopRisk: json['isTopRisk'] == true,
+      radiusMeters: (json['radiusMeters'] as num?)?.toInt() ?? 300,
     );
   }
 }
