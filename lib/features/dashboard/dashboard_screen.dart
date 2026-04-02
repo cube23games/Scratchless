@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_theme.dart';
 import '../../core/models/accountability_partner.dart';
+import '../../core/models/risky_place.dart';
 import '../../core/models/purchase_log.dart';
 import '../../core/models/urge_session_log.dart';
 import '../../core/models/spend_cap_plan.dart';
@@ -33,6 +34,7 @@ class DashboardScreen extends StatelessWidget {
   final RiskyTimeInsight riskyTimeInsight;
   final bool showRiskyTimeWarningCard;
   final AccountabilityPartner accountabilityPartner;
+  final List<RiskyPlace> riskyPlaces;
   final MilestoneCardData? celebrationReady;
   final void Function(double amount, String? note, List<String> tags)
       onLogPurchase;
@@ -51,6 +53,7 @@ class DashboardScreen extends StatelessWidget {
   final VoidCallback onOpenMilestones;
   final VoidCallback onOpenAccountability;
   final VoidCallback onOpenPreStoreMode;
+  final VoidCallback onOpenRiskyPlaces;
   final ValueChanged<String> onCelebrateMilestone;
 
   const DashboardScreen({
@@ -70,6 +73,7 @@ class DashboardScreen extends StatelessWidget {
     required this.riskyTimeInsight,
     required this.showRiskyTimeWarningCard,
     required this.accountabilityPartner,
+    required this.riskyPlaces,
     required this.celebrationReady,
     required this.onLogPurchase,
     required this.onEditPurchase,
@@ -86,6 +90,7 @@ class DashboardScreen extends StatelessWidget {
     required this.onOpenMilestones,
     required this.onOpenAccountability,
     required this.onOpenPreStoreMode,
+    required this.onOpenRiskyPlaces,
     required this.onCelebrateMilestone,
   });
 
@@ -110,6 +115,9 @@ class DashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lastLog = logs.isEmpty ? null : logs.first;
+    final topRiskPlaces = riskyPlaces.where((place) => place.isTopRisk).toList();
+    final topRiskPlace = topRiskPlaces.isEmpty ? null : topRiskPlaces.first;
+    final riskyPlaceCount = riskyPlaces.length;
     final showSpendCapPressureWarning = SpendCapService.hasPressureWarning(
       plan: spendCapPlan,
       progress: spendCapProgress,
@@ -422,6 +430,54 @@ class DashboardScreen extends StatelessWidget {
             isPrimary: false,
             icon: Icons.directions_car_rounded,
             onPressed: onOpenPreStoreMode,
+          ),
+          const SizedBox(height: 10),
+          AppCard(
+            onTap: onOpenRiskyPlaces,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Risky places',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  topRiskPlace != null
+                      ? topRiskPlace.label
+                      : riskyPlaceCount > 0
+                          ? '$riskyPlaceCount place${riskyPlaceCount == 1 ? '' : 's'} on your watchlist'
+                          : 'No risky places saved yet',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  topRiskPlace != null
+                      ? 'Top risk place on your watchlist. Keep this stop visible before it turns automatic.'
+                      : riskyPlaceCount > 0
+                          ? 'Open your watchlist and keep risky stops front-of-mind.'
+                          : 'Save the stores and stops that most often turn into ticket purchases.',
+                  style: const TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                AppButton(
+                  label: 'Open risky places',
+                  isPrimary: false,
+                  icon: Icons.place_rounded,
+                  onPressed: onOpenRiskyPlaces,
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 10),
           AppButton(

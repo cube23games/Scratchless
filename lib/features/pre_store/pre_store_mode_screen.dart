@@ -97,6 +97,11 @@ class _PreStoreModeScreenState extends State<PreStoreModeScreen> {
       ...widget.riskyPlaces.where((place) => place.isTopRisk),
       ...widget.riskyPlaces.where((place) => !place.isTopRisk),
     ].take(3).toList();
+    final topRiskPlaces = widget.riskyPlaces.where((place) => place.isTopRisk).toList();
+    final topRiskPlace = topRiskPlaces.isEmpty ? null : topRiskPlaces.first;
+    final previewPlaces = topRiskPlace == null
+        ? highlightedPlaces
+        : highlightedPlaces.where((place) => place.id != topRiskPlace.id).toList();
 
     final supportNowMessage =
         AccountabilityMessageService.buildSupportNowMessage(
@@ -321,48 +326,113 @@ class _PreStoreModeScreenState extends State<PreStoreModeScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                if (highlightedPlaces.isEmpty)
+                if (topRiskPlace != null) ...[
                   const Text(
-                    'No risky places saved yet. Add your common danger-zone stops so ScratchLess can keep them visible.',
+                    'Top risk place on your watchlist',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    topRiskPlace.label,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    topRiskPlace.note.trim().isNotEmpty
+                        ? topRiskPlace.note
+                        : 'Keep this stop visible before it turns automatic.',
+                    style: const TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 14,
+                    ),
+                  ),
+                  if (previewPlaces.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Other saved risky stops',
+                      style: TextStyle(
+                        color: AppTheme.mutedText,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                ] else if (highlightedPlaces.isEmpty) ...[
+                  const Text(
+                    'No risky places saved yet. Add the stops that most often turn into ticket purchases.',
                     style: TextStyle(
                       color: AppTheme.mutedText,
                       fontSize: 14,
                     ),
-                  )
-                else
-                  ...highlightedPlaces.map((place) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.only(top: 5),
-                            child: Icon(
-                              Icons.location_on_rounded,
-                              size: 14,
-                              color: AppTheme.accent,
-                            ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (topRiskPlace == null && highlightedPlaces.isNotEmpty) ...[
+                  const Text(
+                    'Keep these stops visible before they turn automatic.',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                ...(topRiskPlace == null ? highlightedPlaces : previewPlaces).take(3).map((place) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 5),
+                          child: Icon(
+                            place.isTopRisk
+                                ? Icons.priority_high_rounded
+                                : Icons.place_rounded,
+                            size: 16,
+                            color: AppTheme.accent,
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              place.isTopRisk
-                                  ? '${place.label} • Top risk'
-                                  : place.label,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                place.label,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
-                            ),
+                              if (place.note.trim().isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  place.note,
+                                  style: const TextStyle(
+                                    color: AppTheme.mutedText,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
-                        ],
-                      ),
-                    );
-                  }),
-                const SizedBox(height: 12),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                const SizedBox(height: 4),
                 AppButton(
-                  label: 'Open risky places watchlist',
+                  label: 'Open risky places',
                   icon: Icons.place_rounded,
                   isPrimary: false,
                   onPressed: widget.onOpenRiskyPlaces,
