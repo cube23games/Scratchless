@@ -123,7 +123,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Manual danger-zone list',
+                  'Risky-stop watchlist',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 13,
@@ -132,7 +132,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Save the stores, routes, and stops that tend to pull you toward tickets.',
+                  'Keep the stores, routes, and stops most likely to turn into a ticket purchase visible.',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
@@ -140,7 +140,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'This is a simple watchlist for the places you already know can be risky.',
+                  'Use this watchlist to flag the stops that are easiest to rationalize and hardest to ignore in the moment.',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 14,
@@ -159,7 +159,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
           if (displayPlaces.isEmpty)
             const AppCard(
               child: Text(
-                'No risky places saved yet. Add one place you want ScratchLess to help you think about before stopping.',
+                'No risky places saved yet. Add the stops most likely to turn into a ticket purchase so ScratchLess can keep them visible.',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
@@ -194,7 +194,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                       ],
                       const SizedBox(height: 8),
                       Text(
-                        place.isTopRisk ? 'Top risk place' : 'Tap to edit',
+                        place.isTopRisk ? 'Top risk place on your watchlist' : 'Open to edit details',
                         style: const TextStyle(
                           color: AppTheme.mutedText,
                           fontSize: 12,
@@ -254,7 +254,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
     if (label.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Enter a place name before saving.'),
+          content: Text('Enter the stop or place name before saving.'),
         ),
       );
       return;
@@ -286,7 +286,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
             return AlertDialog(
               title: const Text('Delete risky place?'),
               content: const Text(
-                'This will permanently remove the place from your watchlist.',
+                'This removes the place from your watchlist.',
               ),
               actions: [
                 TextButton(
