@@ -255,6 +255,7 @@ class _HomeShellState extends State<HomeShell> {
         riskyTimeInsight: widget.riskyTimeInsight,
         showRiskyTimeWarningCard: widget.showRiskyTimeWarningCard,
         accountabilityPartner: widget.accountabilityPartner,
+        riskyPlaces: widget.riskyPlaces,
         celebrationReady: widget.celebrationReady,
         onLogPurchase: widget.onLogPurchase,
         onEditPurchase: widget.onEditPurchase,
@@ -272,6 +273,7 @@ class _HomeShellState extends State<HomeShell> {
         onOpenGoals: _openGoals,
         onOpenMilestones: _openMilestones,
         onOpenPreStoreMode: _openPreStoreMode,
+        onOpenRiskyPlaces: _openRiskyPlaces,
         onOpenAccountability: _openAccountability,
 
         onCelebrateMilestone: widget.onCelebrateMilestone,
