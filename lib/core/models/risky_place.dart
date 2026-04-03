@@ -5,6 +5,8 @@ class RiskyPlace {
   final bool isTopRisk;
   final int radiusMeters;
   final bool locationAlertsEnabled;
+  final double? latitude;
+  final double? longitude;
 
   const RiskyPlace({
     required this.id,
@@ -13,6 +15,8 @@ class RiskyPlace {
     required this.isTopRisk,
     required this.radiusMeters,
     this.locationAlertsEnabled = false,
+    this.latitude,
+    this.longitude,
   });
 
   RiskyPlace copyWith({
@@ -22,6 +26,8 @@ class RiskyPlace {
     bool? isTopRisk,
     int? radiusMeters,
     bool? locationAlertsEnabled,
+    double? latitude,
+    double? longitude,
   }) {
     return RiskyPlace(
       id: id ?? this.id,
@@ -31,6 +37,8 @@ class RiskyPlace {
       radiusMeters: radiusMeters ?? this.radiusMeters,
       locationAlertsEnabled:
           locationAlertsEnabled ?? this.locationAlertsEnabled,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
     );
   }
 
@@ -42,6 +50,8 @@ class RiskyPlace {
       'isTopRisk': isTopRisk,
       'radiusMeters': radiusMeters,
       'locationAlertsEnabled': locationAlertsEnabled,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 
@@ -53,6 +63,8 @@ class RiskyPlace {
       isTopRisk: json['isTopRisk'] == true,
       radiusMeters: (json['radiusMeters'] as num?)?.toInt() ?? 300,
       locationAlertsEnabled: json['locationAlertsEnabled'] == true,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
     );
   }
 }

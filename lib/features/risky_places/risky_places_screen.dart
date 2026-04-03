@@ -195,11 +195,25 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                       ],
                       const SizedBox(height: 8),
                       Text(
-                        'Future alert radius: ${DistanceFormatterService.usPlaceRadiusLabel(place.radiusMeters)}'
-                        '${place.locationAlertsEnabled ? ' • live place alerts ready' : ''}',
+                        'Future alert radius: ${DistanceFormatterService.usPlaceRadiusLabel(place.radiusMeters)}',
                         style: const TextStyle(
                           color: AppTheme.mutedText,
                           fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        place.latitude != null && place.longitude != null
+                            ? (place.locationAlertsEnabled
+                                ? 'Ready for live place alerts'
+                                : 'Coordinates saved for future live alerts')
+                            : (place.locationAlertsEnabled
+                                ? 'Live place alerts need a saved location'
+                                : 'Location not set yet'),
+                        style: const TextStyle(
+                          color: AppTheme.mutedText,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -292,6 +306,8 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
       isTopRisk: _isTopRisk,
       radiusMeters: _radiusMeters,
       locationAlertsEnabled: _locationAlertsEnabled,
+      latitude: widget.initialPlace?.latitude,
+      longitude: widget.initialPlace?.longitude,
     );
 
     Navigator.of(context).pop(
@@ -418,6 +434,33 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                 _locationAlertsEnabled = value;
               });
             },
+          ),
+          const SizedBox(height: 12),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Live place location',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.initialPlace?.latitude != null &&
+                          widget.initialPlace?.longitude != null
+                      ? 'Coordinates are already saved for this place. It is ready for live geofence alerts once the next hookup step is active.'
+                      : 'Location not set yet. The next step will let you capture coordinates for this place so live alerts can work here.',
+                  style: const TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           SwitchListTile(
