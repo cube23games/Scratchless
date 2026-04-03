@@ -15,6 +15,7 @@ class LocalNotificationService {
   static const int _dailyCheckInId = 1001;
   static const int _eveningSupportId = 1002;
   static const int _riskyTimeWarningId = 1003;
+  static const int _livePlaceAlertId = 1004;
 
   static const String _channelId = 'scratchless_support';
   static const String _channelName = 'ScratchLess Support';
@@ -169,6 +170,25 @@ class LocalNotificationService {
         importance: Importance.high,
         priority: Priority.high,
       ),
+    );
+  }
+
+  Future<void> showLivePlaceAlert({
+    required String headline,
+    required String body,
+  }) async {
+    await initialize();
+
+    final granted = await _requestNotificationPermission();
+    if (granted == false) {
+      return;
+    }
+
+    await _plugin.show(
+      _livePlaceAlertId,
+      headline,
+      body,
+      _notificationDetails(),
     );
   }
 
