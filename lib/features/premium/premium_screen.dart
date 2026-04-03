@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_theme.dart';
 import '../../core/models/premium_state.dart';
+import '../../core/services/location_permission_plan_service.dart';
 import '../../core/services/feature_gate_service.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
@@ -19,6 +20,7 @@ class PremiumScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPremium = premiumState.isPremium;
+    final placeAlertsPlan = LocationPermissionPlanService.premiumPlaceAlertsPlan();
 
     return Scaffold(
       appBar: AppBar(
@@ -99,6 +101,38 @@ class PremiumScreen extends StatelessWidget {
                 _BulletLine('Basic streaks'),
                 _BulletLine('Core reminders'),
                 _BulletLine('Basic weekly snapshot'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Live place-alert permission plan',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  placeAlertsPlan.headline,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  placeAlertsPlan.body,
+                  style: const TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 14,
+                  ),
+                ),
               ],
             ),
           ),
