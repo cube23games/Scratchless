@@ -4,6 +4,7 @@ class RiskyPlace {
   final String note;
   final bool isTopRisk;
   final int radiusMeters;
+  final bool locationAlertsEnabled;
 
   const RiskyPlace({
     required this.id,
@@ -11,6 +12,7 @@ class RiskyPlace {
     required this.note,
     required this.isTopRisk,
     required this.radiusMeters,
+    this.locationAlertsEnabled = false,
   });
 
   RiskyPlace copyWith({
@@ -19,6 +21,7 @@ class RiskyPlace {
     String? note,
     bool? isTopRisk,
     int? radiusMeters,
+    bool? locationAlertsEnabled,
   }) {
     return RiskyPlace(
       id: id ?? this.id,
@@ -26,6 +29,8 @@ class RiskyPlace {
       note: note ?? this.note,
       isTopRisk: isTopRisk ?? this.isTopRisk,
       radiusMeters: radiusMeters ?? this.radiusMeters,
+      locationAlertsEnabled:
+          locationAlertsEnabled ?? this.locationAlertsEnabled,
     );
   }
 
@@ -36,6 +41,7 @@ class RiskyPlace {
       'note': note,
       'isTopRisk': isTopRisk,
       'radiusMeters': radiusMeters,
+      'locationAlertsEnabled': locationAlertsEnabled,
     };
   }
 
@@ -46,6 +52,7 @@ class RiskyPlace {
       note: json['note']?.toString() ?? '',
       isTopRisk: json['isTopRisk'] == true,
       radiusMeters: (json['radiusMeters'] as num?)?.toInt() ?? 300,
+      locationAlertsEnabled: json['locationAlertsEnabled'] == true,
     );
   }
 }

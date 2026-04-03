@@ -121,6 +121,7 @@ class PremiumScreen extends StatelessWidget {
                 _BulletLine('Weekly reflection summaries'),
                 _BulletLine('Custom reminder schedules'),
                 _BulletLine('Exportable progress reports'),
+                _BulletLine('Future live place alerts'),
                 _BulletLine('Future accountability tools'),
               ],
             ),

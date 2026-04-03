@@ -21,6 +21,10 @@ class FeatureGateService {
     return state.isPremium;
   }
 
+  static bool placeAlertsUnlocked(PremiumState state) {
+    return state.isPremium;
+  }
+
   static String premiumStatusLabel(PremiumState state) {
     return state.isPremium ? 'Premium active' : 'Free plan';
   }

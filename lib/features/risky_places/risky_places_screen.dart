@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_theme.dart';
 import '../../core/models/risky_place.dart';
+import '../../core/services/distance_formatter_service.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 
@@ -194,6 +195,16 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                       ],
                       const SizedBox(height: 8),
                       Text(
+                        'Future alert radius: ${DistanceFormatterService.usPlaceRadiusLabel(place.radiusMeters)}'
+                        '${place.locationAlertsEnabled ? ' • live place alerts ready' : ''}',
+                        style: const TextStyle(
+                          color: AppTheme.mutedText,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
                         place.isTopRisk ? 'Top risk place on your watchlist' : 'Open to edit details',
                         style: const TextStyle(
                           color: AppTheme.mutedText,
@@ -234,6 +245,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
   late final TextEditingController _noteController;
   late bool _isTopRisk;
   late int _radiusMeters;
+  late bool _locationAlertsEnabled;
 
   bool get _isEditing => widget.initialPlace != null;
 
@@ -248,6 +260,8 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
     );
     _isTopRisk = widget.initialPlace?.isTopRisk ?? false;
     _radiusMeters = widget.initialPlace?.radiusMeters ?? 300;
+    _locationAlertsEnabled =
+        widget.initialPlace?.locationAlertsEnabled ?? false;
   }
 
   @override
@@ -277,6 +291,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
       note: note,
       isTopRisk: _isTopRisk,
       radiusMeters: _radiusMeters,
+      locationAlertsEnabled: _locationAlertsEnabled,
     );
 
     Navigator.of(context).pop(
@@ -363,7 +378,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'This does not trigger location alerts yet. It sets up the distance you may want later for smarter place warnings.',
+                  'Store this radius internally now. ScratchLess will show it in feet or miles and use it later for premium live place alerts.',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 14,
@@ -375,7 +390,9 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                   runSpacing: 10,
                   children: _radiusPresets.map((preset) {
                     return ChoiceChip(
-                      label: Text('${preset.label} • ${preset.meters}m'),
+                      label: Text(
+                        '${preset.label} • ${DistanceFormatterService.usPlaceRadiusLabel(preset.meters)}',
+                      ),
                       selected: _radiusMeters == preset.meters,
                       onSelected: (_) {
                         setState(() {
@@ -387,6 +404,20 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Future live place alerts'),
+            subtitle: const Text(
+              'Premium architecture only for now. This prepares this stop for future live place alerts later.',
+            ),
+            value: _locationAlertsEnabled,
+            onChanged: (value) {
+              setState(() {
+                _locationAlertsEnabled = value;
+              });
+            },
           ),
           const SizedBox(height: 12),
           SwitchListTile(
