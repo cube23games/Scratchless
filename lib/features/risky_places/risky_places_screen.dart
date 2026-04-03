@@ -257,6 +257,8 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
 
   late final TextEditingController _labelController;
   late final TextEditingController _noteController;
+  late final TextEditingController _latitudeController;
+  late final TextEditingController _longitudeController;
   late bool _isTopRisk;
   late int _radiusMeters;
   late bool _locationAlertsEnabled;
@@ -272,6 +274,12 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
     _noteController = TextEditingController(
       text: widget.initialPlace?.note ?? '',
     );
+    _latitudeController = TextEditingController(
+      text: _formatCoordinate(widget.initialPlace?.latitude),
+    );
+    _longitudeController = TextEditingController(
+      text: _formatCoordinate(widget.initialPlace?.longitude),
+    );
     _isTopRisk = widget.initialPlace?.isTopRisk ?? false;
     _radiusMeters = widget.initialPlace?.radiusMeters ?? 300;
     _locationAlertsEnabled =
@@ -282,7 +290,24 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
   void dispose() {
     _labelController.dispose();
     _noteController.dispose();
+    _latitudeController.dispose();
+    _longitudeController.dispose();
     super.dispose();
+  }
+
+  String _formatCoordinate(double? value) {
+    if (value == null) {
+      return '';
+    }
+    return value.toStringAsFixed(6);
+  }
+
+  double? _parseCoordinate(String raw) {
+    final normalized = raw.trim();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    return double.tryParse(normalized);
   }
 
   void _save() {
@@ -297,6 +322,44 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
     }
 
     final note = _noteController.text.trim();
+    final latitude = _parseCoordinate(_latitudeController.text);
+    final longitude = _parseCoordinate(_longitudeController.text);
+
+    if (_latitudeController.text.trim().isNotEmpty && latitude == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enter a valid latitude.'),
+        ),
+      );
+      return;
+    }
+
+    if (_longitudeController.text.trim().isNotEmpty && longitude == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enter a valid longitude.'),
+        ),
+      );
+      return;
+    }
+
+    if (latitude != null && (latitude < -90 || latitude > 90)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Latitude must be between -90 and 90.'),
+        ),
+      );
+      return;
+    }
+
+    if (longitude != null && (longitude < -180 || longitude > 180)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Longitude must be between -180 and 180.'),
+        ),
+      );
+      return;
+    }
 
     final place = RiskyPlace(
       id: widget.initialPlace?.id ??
@@ -306,8 +369,8 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
       isTopRisk: _isTopRisk,
       radiusMeters: _radiusMeters,
       locationAlertsEnabled: _locationAlertsEnabled,
-      latitude: widget.initialPlace?.latitude,
-      longitude: widget.initialPlace?.longitude,
+      latitude: latitude,
+      longitude: longitude,
     );
 
     Navigator.of(context).pop(
@@ -453,12 +516,62 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                   widget.initialPlace?.latitude != null &&
                           widget.initialPlace?.longitude != null
                       ? 'Coordinates are already saved for this place. It is ready for live geofence alerts once the next hookup step is active.'
-                      : 'Location not set yet. The next step will let you capture coordinates for this place so live alerts can work here.',
+                      : 'Add coordinates manually for now so this place can be used in the first live geofence pass.',
                   style: const TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 14,
                   ),
                 ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _latitudeController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                    signed: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Latitude',
+                    hintText: '35.2271',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _longitudeController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                    signed: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Longitude',
+                    hintText: '-80.8431',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Leave blank for now if you do not know the exact coordinates yet.',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (_isEditing &&
+                    widget.initialPlace?.latitude != null &&
+                    widget.initialPlace?.longitude != null) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _latitudeController.clear();
+                          _longitudeController.clear();
+                        });
+                      },
+                      child: const Text('Clear saved location'),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
