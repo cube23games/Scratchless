@@ -48,6 +48,8 @@ class LiveAlertDebugState {
   final String permissionLabel;
   final bool isArmed;
   final int eligiblePlaceCount;
+  final int blockedPlaceCount;
+  final String? topBlocker;
   final String? lastEventMessage;
   final DateTime? lastEventAt;
   final List<LiveAlertPlaceDebugItem> placeItems;
@@ -57,6 +59,8 @@ class LiveAlertDebugState {
     required this.permissionLabel,
     required this.isArmed,
     required this.eligiblePlaceCount,
+    required this.blockedPlaceCount,
+    required this.topBlocker,
     required this.lastEventMessage,
     required this.lastEventAt,
     required this.placeItems,
@@ -68,6 +72,8 @@ class LiveAlertDebugState {
       permissionLabel: 'Off',
       isArmed: false,
       eligiblePlaceCount: 0,
+      blockedPlaceCount: 0,
+      topBlocker: null,
       lastEventMessage: null,
       lastEventAt: null,
       placeItems: <LiveAlertPlaceDebugItem>[],
@@ -231,11 +237,14 @@ class LivePlaceAlertService {
   LiveAlertDebugState getDebugState() {
     final placeItems =
         _latestAllRiskyPlaces.map(_buildPlaceDebugItem).toList(growable: false);
+    final blockedPlaceCount = placeItems.where((item) => !item.armed).length;
 
     return LiveAlertDebugState(
       permissionLabel: _permissionLabel(_latestPremiumState.livePlaceAlertAccess),
       isArmed: _monitoredPlacesById.isNotEmpty,
       eligiblePlaceCount: _monitoredPlacesById.length,
+      blockedPlaceCount: blockedPlaceCount,
+      topBlocker: _topBlocker(),
       lastEventMessage:
           _recentEvents.isEmpty ? null : _recentEvents.first.message,
       lastEventAt: _recentEvents.isEmpty ? null : _recentEvents.first.createdAt,
@@ -393,14 +402,51 @@ class LivePlaceAlertService {
     }
   }
 
-  void _logEvent(String message) {
-    _recentEvents.insert(
-      0,
-      LiveAlertDebugEvent(
-        createdAt: DateTime.now(),
-        message: message,
-      ),
+  String? _topBlocker() {
+    if (!FeatureGateService.placeAlertsUnlocked(_latestPremiumState)) {
+      return 'Need Premium';
+    }
+
+    final hasEnabledPlaces =
+        _latestAllRiskyPlaces.any((place) => place.locationAlertsEnabled);
+
+    if (!hasEnabledPlaces) {
+      return 'No places enabled';
+    }
+
+    final hasEnabledMissingCoordinates = _latestAllRiskyPlaces.any(
+      (place) =>
+          place.locationAlertsEnabled &&
+          (place.latitude == null || place.longitude == null),
     );
+
+    if (_latestPremiumState.livePlaceAlertAccess != 'fullBackground') {
+      return 'Need background permission';
+    }
+
+    if (hasEnabledMissingCoordinates) {
+      return 'Need saved coordinates';
+    }
+
+    if (_monitoredPlacesById.isEmpty) {
+      return 'Nothing armed yet';
+    }
+
+    return null;
+  }
+
+  void _logEvent(String message) {
+    final nextEvent = LiveAlertDebugEvent(
+      createdAt: DateTime.now(),
+      message: message,
+    );
+
+    if (_recentEvents.isNotEmpty && _recentEvents.first.message == message) {
+      _recentEvents[0] = nextEvent;
+      return;
+    }
+
+    _recentEvents.insert(0, nextEvent);
 
     if (_recentEvents.length > _maxRecentEvents) {
       _recentEvents.removeRange(_maxRecentEvents, _recentEvents.length);

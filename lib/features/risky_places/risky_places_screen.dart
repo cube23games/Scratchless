@@ -218,12 +218,22 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Permission: ${_debugState.permissionLabel} • Eligible places: ${_debugState.eligiblePlaceCount}',
+                  'Permission: ${_debugState.permissionLabel} • Armed: ${_debugState.eligiblePlaceCount} • Blocked: ${_debugState.blockedPlaceCount}',
                   style: const TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 14,
                   ),
                 ),
+                if (_debugState.topBlocker != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Top blocker: ${_debugState.topBlocker}',
+                    style: const TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
                 if (_debugState.lastEventMessage != null) ...[
                   const SizedBox(height: 8),
                   Text(
