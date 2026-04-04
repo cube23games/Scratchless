@@ -315,11 +315,37 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
       _premiumState = PremiumState(
         isPremium: true,
         trialStartedAt: DateTime.now(),
+        livePlaceAlertAccess: _premiumState.livePlaceAlertAccess,
       );
     });
 
     _persistState();
     _syncLivePlaceAlerts();
+  }
+
+  Future<String> _enableLivePlaceAlertsForeground() async {
+    if (!_premiumState.isPremium) {
+      return _premiumState.livePlaceAlertAccess;
+    }
+
+    final result =
+        await LivePlaceAlertService.instance.requestLocationPermission();
+
+    final nextAccess = result >= 2 ? 'foregroundOnly' : 'off';
+
+    if (!mounted) {
+      return nextAccess;
+    }
+
+    setState(() {
+      _premiumState = _premiumState.copyWith(
+        livePlaceAlertAccess: nextAccess,
+      );
+    });
+
+    _persistState();
+    _syncLivePlaceAlerts();
+    return nextAccess;
   }
 
   void _saveWeeklyReflectionToHistory() {
@@ -522,6 +548,8 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
                       _completeDetailedUrgeSession,
                   onUpdateReminderSettings: _updateReminderSettings,
                   onStartPremiumTrial: _startPremiumTrial,
+                  onEnableLivePlaceAlertsForeground:
+                      _enableLivePlaceAlertsForeground,
                   shouldShowSuccessPremiumPrompt:
                       PremiumPromptService.canShow(
                     type: PremiumPromptType.firstUrgeWin,

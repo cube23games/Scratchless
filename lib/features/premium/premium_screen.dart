@@ -2,25 +2,101 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_theme.dart';
 import '../../core/models/premium_state.dart';
-import '../../core/services/location_permission_plan_service.dart';
 import '../../core/services/feature_gate_service.dart';
+import '../../core/services/location_permission_plan_service.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 
 class PremiumScreen extends StatelessWidget {
   final PremiumState premiumState;
   final VoidCallback onStartTrial;
+  final Future<String> Function()? onEnableLivePlaceAlertsForeground;
 
   const PremiumScreen({
     super.key,
     required this.premiumState,
     required this.onStartTrial,
+    this.onEnableLivePlaceAlertsForeground,
   });
+
+  String _livePlaceAlertHeadline() {
+    switch (premiumState.livePlaceAlertAccess) {
+      case 'fullBackground':
+        return 'Persistent live alerts ready';
+      case 'foregroundOnly':
+        return 'Foreground access ready';
+      default:
+        return 'Live place alerts are off';
+    }
+  }
+
+  String _livePlaceAlertBody() {
+    switch (premiumState.livePlaceAlertAccess) {
+      case 'fullBackground':
+        return 'ScratchLess has the background access needed for persistent live place alerts.';
+      case 'foregroundOnly':
+        return 'Foreground location is granted. The extra Android background step comes next.';
+      default:
+        return 'Enable location from this screen when you are ready to start the live place-alert setup.';
+    }
+  }
+
+  Future<void> _handleEnableLivePlaceAlerts(BuildContext context) async {
+    if (onEnableLivePlaceAlertsForeground == null) {
+      return;
+    }
+
+    final proceed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) {
+            return AlertDialog(
+              title: const Text('Enable live place alerts?'),
+              content: const Text(
+                'ScratchLess uses location only for your saved risky places so it can warn you before a stop turns automatic. This first step asks for foreground location only.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Not now'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text('Continue'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (!proceed || !context.mounted) {
+      return;
+    }
+
+    final nextAccess = await onEnableLivePlaceAlertsForeground!();
+
+    if (!context.mounted) {
+      return;
+    }
+
+    final message = nextAccess == 'foregroundOnly'
+        ? 'Foreground location is ready. Background access comes next.'
+        : 'Location permission was not granted.';
+
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(
+        content: Text(message),
+      ),
+    );
+
+    Navigator.of(context).pop();
+  }
 
   @override
   Widget build(BuildContext context) {
     final isPremium = premiumState.isPremium;
-    final placeAlertsPlan = LocationPermissionPlanService.premiumPlaceAlertsPlan();
+    final placeAlertsPlan =
+        LocationPermissionPlanService.premiumPlaceAlertsPlan();
 
     return Scaffold(
       appBar: AppBar(
@@ -131,6 +207,62 @@ class PremiumScreen extends StatelessWidget {
                   style: const TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Live place-alert status',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _livePlaceAlertHeadline(),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _livePlaceAlertBody(),
+                  style: const TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                AppButton(
+                  label: 'Enable live place alerts',
+                  icon: Icons.location_on_rounded,
+                  onPressed: isPremium &&
+                          premiumState.livePlaceAlertAccess == 'off' &&
+                          onEnableLivePlaceAlertsForeground != null
+                      ? () => _handleEnableLivePlaceAlerts(context)
+                      : null,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  !isPremium
+                      ? 'Start Premium first to unlock the live place-alert setup.'
+                      : premiumState.livePlaceAlertAccess == 'off'
+                          ? 'This first step asks for foreground location only.'
+                          : premiumState.livePlaceAlertAccess == 'foregroundOnly'
+                              ? 'Foreground access is saved. The Android background step comes next.'
+                              : 'Background-ready status will be refined in the next permission pass.',
+                  style: const TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 12,
                   ),
                 ),
               ],

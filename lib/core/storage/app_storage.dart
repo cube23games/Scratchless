@@ -93,6 +93,7 @@ class AppStorage {
 
   static const String _isPremiumKey = 'is_premium';
   static const String _trialStartedAtKey = 'trial_started_at';
+  static const String _livePlaceAlertAccessKey = 'live_place_alert_access';
 
   static const String _accountabilityPartnerKey = 'accountability_partner';
   static const String _stopReasonsKey = 'stop_reasons';
@@ -192,6 +193,8 @@ class AppStorage {
         premiumState: PremiumState(
           isPremium: prefs.getBool(_isPremiumKey) ?? false,
           trialStartedAt: trialStartedAt,
+          livePlaceAlertAccess:
+              prefs.getString(_livePlaceAlertAccessKey) ?? 'off',
         ),
         weeklyReflectionArchive: weeklyReflectionArchive,
         accountabilityPartner: accountabilityPartner,
@@ -267,6 +270,11 @@ class AppStorage {
     } else {
       await prefs.remove(_trialStartedAtKey);
     }
+
+    await prefs.setString(
+      _livePlaceAlertAccessKey,
+      state.premiumState.livePlaceAlertAccess,
+    );
 
     await prefs.setString(
       _accountabilityPartnerKey,

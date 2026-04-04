@@ -61,7 +61,8 @@ class LivePlaceAlertService {
     required PremiumState premiumState,
     required List<RiskyPlace> riskyPlaces,
   }) {
-    if (!FeatureGateService.placeAlertsUnlocked(premiumState)) {
+    if (!FeatureGateService.placeAlertsUnlocked(premiumState) ||
+        premiumState.livePlaceAlertAccess != 'fullBackground') {
       return const <RiskyPlace>[];
     }
 
