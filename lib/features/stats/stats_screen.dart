@@ -132,6 +132,7 @@ class StatsScreen extends StatelessWidget {
   final List<WeeklyReflectionArchiveItem> weeklyReflectionArchive;
   final VoidCallback onStartPremiumTrial;
   final Future<String> Function() onEnableLivePlaceAlertsForeground;
+  final Future<String> Function() onEnableLivePlaceAlertsBackground;
   final VoidCallback onSaveWeeklyReflectionToHistory;
   final void Function(String id, double amount, String? note, List<String> tags)
       onEditPurchase;
@@ -151,6 +152,7 @@ class StatsScreen extends StatelessWidget {
     required this.weeklyReflectionArchive,
     required this.onStartPremiumTrial,
     required this.onEnableLivePlaceAlertsForeground,
+    required this.onEnableLivePlaceAlertsBackground,
     required this.onSaveWeeklyReflectionToHistory,
     required this.onEditPurchase,
     required this.onDeletePurchase,
@@ -182,6 +184,8 @@ class StatsScreen extends StatelessWidget {
           onStartTrial: onStartPremiumTrial,
           onEnableLivePlaceAlertsForeground:
               onEnableLivePlaceAlertsForeground,
+          onEnableLivePlaceAlertsBackground:
+              onEnableLivePlaceAlertsBackground,
         ),
       ),
     );
