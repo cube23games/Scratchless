@@ -57,6 +57,16 @@ class LivePlaceAlertService {
     return await tl.Tracelet.requestPermission();
   }
 
+  Future<int> getPermissionStatus() async {
+    await initialize();
+    return await tl.Tracelet.getPermissionStatus();
+  }
+
+  Future<void> openAppSettings() async {
+    await initialize();
+    await tl.Tracelet.openAppSettings();
+  }
+
   List<RiskyPlace> enabledPremiumPlaces({
     required PremiumState premiumState,
     required List<RiskyPlace> riskyPlaces,

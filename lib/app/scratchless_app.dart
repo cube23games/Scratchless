@@ -348,6 +348,40 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     return nextAccess;
   }
 
+  Future<String> _enableLivePlaceAlertsBackground() async {
+    if (!_premiumState.isPremium) {
+      return _premiumState.livePlaceAlertAccess;
+    }
+
+    if (_premiumState.livePlaceAlertAccess != 'foregroundOnly') {
+      return _premiumState.livePlaceAlertAccess;
+    }
+
+    var result =
+        await LivePlaceAlertService.instance.requestLocationPermission();
+
+    if (result == 4) {
+      await LivePlaceAlertService.instance.openAppSettings();
+      result = await LivePlaceAlertService.instance.getPermissionStatus();
+    }
+
+    final nextAccess = result >= 3 ? 'fullBackground' : 'foregroundOnly';
+
+    if (!mounted) {
+      return nextAccess;
+    }
+
+    setState(() {
+      _premiumState = _premiumState.copyWith(
+        livePlaceAlertAccess: nextAccess,
+      );
+    });
+
+    _persistState();
+    _syncLivePlaceAlerts();
+    return nextAccess;
+  }
+
   void _saveWeeklyReflectionToHistory() {
     final report = WeeklyReflectionService.build(
       weeklySummary: _weeklySummary,
@@ -550,6 +584,8 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
                   onStartPremiumTrial: _startPremiumTrial,
                   onEnableLivePlaceAlertsForeground:
                       _enableLivePlaceAlertsForeground,
+                  onEnableLivePlaceAlertsBackground:
+                      _enableLivePlaceAlertsBackground,
                   shouldShowSuccessPremiumPrompt:
                       PremiumPromptService.canShow(
                     type: PremiumPromptType.firstUrgeWin,

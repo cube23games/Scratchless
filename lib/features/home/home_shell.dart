@@ -62,6 +62,7 @@ class HomeShell extends StatefulWidget {
   final ValueChanged<ReminderSettings> onUpdateReminderSettings;
   final VoidCallback onStartPremiumTrial;
   final Future<String> Function() onEnableLivePlaceAlertsForeground;
+  final Future<String> Function() onEnableLivePlaceAlertsBackground;
   final bool shouldShowSuccessPremiumPrompt;
   final VoidCallback onAcknowledgeSuccessPremiumPrompt;
   final VoidCallback onSaveWeeklyReflectionToHistory;
@@ -110,6 +111,7 @@ class HomeShell extends StatefulWidget {
     required this.onUpdateReminderSettings,
     required this.onStartPremiumTrial,
     required this.onEnableLivePlaceAlertsForeground,
+    required this.onEnableLivePlaceAlertsBackground,
     required this.shouldShowSuccessPremiumPrompt,
     required this.onAcknowledgeSuccessPremiumPrompt,
     required this.onSaveWeeklyReflectionToHistory,
@@ -294,6 +296,8 @@ class _HomeShellState extends State<HomeShell> {
         onStartPremiumTrial: widget.onStartPremiumTrial,
         onEnableLivePlaceAlertsForeground:
             widget.onEnableLivePlaceAlertsForeground,
+        onEnableLivePlaceAlertsBackground:
+            widget.onEnableLivePlaceAlertsBackground,
         onSaveWeeklyReflectionToHistory: widget.onSaveWeeklyReflectionToHistory,
         onEditPurchase: widget.onEditPurchase,
         onDeletePurchase: widget.onDeletePurchase,

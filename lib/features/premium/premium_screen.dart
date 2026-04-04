@@ -11,12 +11,14 @@ class PremiumScreen extends StatelessWidget {
   final PremiumState premiumState;
   final VoidCallback onStartTrial;
   final Future<String> Function()? onEnableLivePlaceAlertsForeground;
+  final Future<String> Function()? onEnableLivePlaceAlertsBackground;
 
   const PremiumScreen({
     super.key,
     required this.premiumState,
     required this.onStartTrial,
     this.onEnableLivePlaceAlertsForeground,
+    this.onEnableLivePlaceAlertsBackground,
   });
 
   String _livePlaceAlertHeadline() {
@@ -35,7 +37,7 @@ class PremiumScreen extends StatelessWidget {
       case 'fullBackground':
         return 'ScratchLess has the background access needed for persistent live place alerts.';
       case 'foregroundOnly':
-        return 'Foreground location is granted. The extra Android background step comes next.';
+        return 'Foreground location is granted. One Android background step remains before persistent live alerts can run.';
       default:
         return 'Enable location from this screen when you are ready to start the live place-alert setup.';
     }
@@ -82,6 +84,57 @@ class PremiumScreen extends StatelessWidget {
     final message = nextAccess == 'foregroundOnly'
         ? 'Foreground location is ready. Background access comes next.'
         : 'Location permission was not granted.';
+
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(
+        content: Text(message),
+      ),
+    );
+
+    Navigator.of(context).pop();
+  }
+
+  Future<void> _handleFinishLivePlaceAlerts(BuildContext context) async {
+    if (onEnableLivePlaceAlertsBackground == null) {
+      return;
+    }
+
+    final proceed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) {
+            return AlertDialog(
+              title: const Text('Finish live place alerts?'),
+              content: const Text(
+                'To keep live place alerts working when ScratchLess is not open, Android needs one more background location step. ScratchLess will send you to the app settings if Android requires it.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Not now'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text('Continue'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (!proceed || !context.mounted) {
+      return;
+    }
+
+    final nextAccess = await onEnableLivePlaceAlertsBackground!();
+
+    if (!context.mounted) {
+      return;
+    }
+
+    final message = nextAccess == 'fullBackground'
+        ? 'Persistent live place alerts are ready.'
+        : 'Background access is still not enabled. You can finish it later from this screen.';
 
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
       SnackBar(
@@ -251,6 +304,17 @@ class PremiumScreen extends StatelessWidget {
                       ? () => _handleEnableLivePlaceAlerts(context)
                       : null,
                 ),
+                const SizedBox(height: 10),
+                AppButton(
+                  label: 'Finish live place alerts',
+                  icon: Icons.settings_rounded,
+                  isPrimary: false,
+                  onPressed: isPremium &&
+                          premiumState.livePlaceAlertAccess == 'foregroundOnly' &&
+                          onEnableLivePlaceAlertsBackground != null
+                      ? () => _handleFinishLivePlaceAlerts(context)
+                      : null,
+                ),
                 const SizedBox(height: 8),
                 Text(
                   !isPremium
@@ -258,8 +322,8 @@ class PremiumScreen extends StatelessWidget {
                       : premiumState.livePlaceAlertAccess == 'off'
                           ? 'This first step asks for foreground location only.'
                           : premiumState.livePlaceAlertAccess == 'foregroundOnly'
-                              ? 'Foreground access is saved. The Android background step comes next.'
-                              : 'Background-ready status will be refined in the next permission pass.',
+                              ? 'Foreground access is saved. The Android background/settings step is next.'
+                              : 'Persistent live place alerts are ready for your coordinate-based risky places.',
                   style: const TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 12,
