@@ -8,6 +8,18 @@ import 'place_alert_cooldown_service.dart';
 import 'place_alert_policy_service.dart';
 import 'risky_time_service.dart';
 
+class CurrentPlaceCoordinate {
+  final double latitude;
+  final double longitude;
+  final double accuracy;
+
+  const CurrentPlaceCoordinate({
+    required this.latitude,
+    required this.longitude,
+    required this.accuracy,
+  });
+}
+
 class LivePlaceAlertService {
   LivePlaceAlertService._();
 
@@ -65,6 +77,27 @@ class LivePlaceAlertService {
   Future<void> openAppSettings() async {
     await initialize();
     await tl.Tracelet.openAppSettings();
+  }
+
+  Future<CurrentPlaceCoordinate?> captureCurrentPosition() async {
+    await initialize();
+
+    final authStatus = await tl.Tracelet.requestPermission();
+    if (authStatus != 2 && authStatus != 3) {
+      return null;
+    }
+
+    final location = await tl.Tracelet.getCurrentPosition(
+      desiredAccuracy: tl.DesiredAccuracy.high,
+      timeout: 30,
+      persist: false,
+    );
+
+    return CurrentPlaceCoordinate(
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      accuracy: location.coords.accuracy,
+    );
   }
 
   List<RiskyPlace> enabledPremiumPlaces({

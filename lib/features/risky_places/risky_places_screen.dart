@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/app_theme.dart';
 import '../../core/models/risky_place.dart';
 import '../../core/services/distance_formatter_service.dart';
+import '../../core/services/live_place_alert_service.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 
@@ -262,6 +263,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
   late bool _isTopRisk;
   late int _radiusMeters;
   late bool _locationAlertsEnabled;
+  bool _capturingLocation = false;
 
   bool get _isEditing => widget.initialPlace != null;
 
@@ -308,6 +310,59 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
       return null;
     }
     return double.tryParse(normalized);
+  }
+
+  Future<void> _useCurrentLocation() async {
+    setState(() {
+      _capturingLocation = true;
+    });
+
+    try {
+      final coordinate =
+          await LivePlaceAlertService.instance.captureCurrentPosition();
+
+      if (!mounted) {
+        return;
+      }
+
+      if (coordinate == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Location permission was not granted.'),
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        _latitudeController.text = _formatCoordinate(coordinate.latitude);
+        _longitudeController.text = _formatCoordinate(coordinate.longitude);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Current location saved (${coordinate.accuracy.toStringAsFixed(0)}m accuracy).',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not capture the current location.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _capturingLocation = false;
+        });
+      }
+    }
   }
 
   void _save() {
@@ -523,6 +578,15 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
+                AppButton(
+                  label: _capturingLocation
+                      ? 'Capturing current location...'
+                      : 'Use my current location',
+                  icon: Icons.my_location_rounded,
+                  isPrimary: false,
+                  onPressed: _capturingLocation ? null : _useCurrentLocation,
+                ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: _latitudeController,
                   keyboardType: const TextInputType.numberWithOptions(
@@ -547,6 +611,15 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
+                const Text(
+                  'Use your current location at the risky stop, or enter the coordinates manually if you already know them.',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
                 const Text(
                   'Leave blank for now if you do not know the exact coordinates yet.',
                   style: TextStyle(
