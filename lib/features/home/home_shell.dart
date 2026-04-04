@@ -204,6 +204,8 @@ class _HomeShellState extends State<HomeShell> {
       MaterialPageRoute<void>(
         builder: (_) => RiskyPlacesScreen(
           places: widget.riskyPlaces,
+          premiumState: widget.premiumState,
+          riskyTimeInsight: widget.riskyTimeInsight,
           onAddPlace: widget.onAddRiskyPlace,
           onEditPlace: widget.onEditRiskyPlace,
           onDeletePlace: widget.onDeleteRiskyPlace,

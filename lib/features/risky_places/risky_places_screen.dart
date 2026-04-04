@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../../app/app_theme.dart';
+import '../../core/models/premium_state.dart';
 import '../../core/models/risky_place.dart';
 import '../../core/services/distance_formatter_service.dart';
 import '../../core/services/live_place_alert_service.dart';
+import '../../core/services/risky_time_service.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 
 class RiskyPlacesScreen extends StatefulWidget {
   final List<RiskyPlace> places;
+  final PremiumState premiumState;
+  final RiskyTimeInsight riskyTimeInsight;
   final ValueChanged<RiskyPlace> onAddPlace;
   final ValueChanged<RiskyPlace> onEditPlace;
   final void Function(String id) onDeletePlace;
@@ -16,6 +20,8 @@ class RiskyPlacesScreen extends StatefulWidget {
   const RiskyPlacesScreen({
     super.key,
     required this.places,
+    required this.premiumState,
+    required this.riskyTimeInsight,
     required this.onAddPlace,
     required this.onEditPlace,
     required this.onDeletePlace,
@@ -27,13 +33,46 @@ class RiskyPlacesScreen extends StatefulWidget {
 
 class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
   late List<RiskyPlace> _places;
+  LiveAlertDebugState _debugState = LiveAlertDebugState.empty();
 
   @override
   void initState() {
     super.initState();
     _places = List<RiskyPlace>.from(widget.places);
+    _debugState = LivePlaceAlertService.instance.getDebugState();
+    _refreshLiveAlertDebugState();
   }
 
+  Future<void> _refreshLiveAlertDebugState() async {
+    await LivePlaceAlertService.instance.syncMonitoredPlaces(
+      premiumState: widget.premiumState,
+      riskyPlaces: _places,
+      riskyTimeInsight: widget.riskyTimeInsight,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _debugState = LivePlaceAlertService.instance.getDebugState();
+    });
+  }
+
+  String _placeDebugStatus(String placeId) {
+    for (final item in _debugState.placeItems) {
+      if (item.placeId == placeId) {
+        return item.status;
+      }
+    }
+    return 'Status unavailable';
+  }
+
+  String _eventTimeLabel(DateTime time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
 
   List<RiskyPlace> get _sortedPlaces {
     final items = [..._places];
@@ -68,6 +107,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
     });
 
     widget.onAddPlace(place);
+    await _refreshLiveAlertDebugState();
   }
 
   Future<void> _openEditPlace(BuildContext context, RiskyPlace place) async {
@@ -90,6 +130,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
       });
 
       widget.onDeletePlace(deletedId);
+      await _refreshLiveAlertDebugState();
       return;
     }
 
@@ -106,6 +147,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
       });
 
       widget.onEditPlace(updatedPlace);
+      await _refreshLiveAlertDebugState();
     }
   }
 
@@ -148,6 +190,95 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                     fontSize: 14,
                   ),
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Live alert status',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _debugState.isArmed
+                      ? 'Live alerts armed'
+                      : 'Live alerts not armed',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Permission: ${_debugState.permissionLabel} • Eligible places: ${_debugState.eligiblePlaceCount}',
+                  style: const TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 14,
+                  ),
+                ),
+                if (_debugState.lastEventMessage != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Last event: ${_debugState.lastEventMessage}',
+                    style: const TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                AppButton(
+                  label: 'Refresh live alert status',
+                  icon: Icons.sync_rounded,
+                  isPrimary: false,
+                  onPressed: _refreshLiveAlertDebugState,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Recent live alert events',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (_debugState.recentEvents.isEmpty)
+                  const Text(
+                    'No live alert events yet.',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 14,
+                    ),
+                  )
+                else
+                  ..._debugState.recentEvents.map((event) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        '${_eventTimeLabel(event.createdAt)} — ${event.message}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    );
+                  }),
               ],
             ),
           ),
@@ -218,9 +349,18 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Live alert status: ${_placeDebugStatus(place.id)}',
+                        style: const TextStyle(
+                          color: AppTheme.mutedText,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Text(
-                        place.isTopRisk ? 'Top risk place on your watchlist' : 'Open to edit details',
+                        place.isTopRisk ? 'Top risk place' : 'Tap to edit',
                         style: const TextStyle(
                           color: AppTheme.mutedText,
                           fontSize: 12,
@@ -494,7 +634,8 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
             maxLines: 3,
             decoration: const InputDecoration(
               labelText: 'Optional note',
-              hintText: 'Usually risky after payday, after work, or when I feel stressed.',
+              hintText:
+                  'Usually risky after payday, after work, or when I feel stressed.',
             ),
           ),
           const SizedBox(height: 12),
@@ -653,7 +794,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
             contentPadding: EdgeInsets.zero,
             title: const Text('Mark as top risk'),
             subtitle: const Text(
-              'Use this for the stop most likely to turn into an automatic ticket purchase.',
+              'Top-risk places stay surfaced first and use stronger live-alert wording later.',
             ),
             value: _isTopRisk,
             onChanged: (value) {
@@ -664,18 +805,17 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
           ),
           const SizedBox(height: 16),
           AppButton(
-            label: _isEditing ? 'Save changes' : 'Save place',
-            icon: Icons.check_rounded,
+            label: _isEditing ? 'Save changes' : 'Save risky place',
+            icon: Icons.save_rounded,
             onPressed: _save,
           ),
           if (_isEditing) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
-              child: TextButton.icon(
+              child: TextButton(
                 onPressed: _delete,
-                icon: const Icon(Icons.delete_outline_rounded),
-                label: const Text('Delete place'),
+                child: const Text('Delete risky place'),
               ),
             ),
           ],
@@ -685,16 +825,6 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
   }
 }
 
-class _RadiusPreset {
-  final String label;
-  final int meters;
-
-  const _RadiusPreset({
-    required this.label,
-    required this.meters,
-  });
-}
-
 class _EditRiskyPlaceResult {
   final RiskyPlace? savedPlace;
   final String? deletedId;
@@ -702,5 +832,15 @@ class _EditRiskyPlaceResult {
   const _EditRiskyPlaceResult({
     this.savedPlace,
     this.deletedId,
+  });
+}
+
+class _RadiusPreset {
+  final String label;
+  final int meters;
+
+  const _RadiusPreset({
+    required this.label,
+    required this.meters,
   });
 }
