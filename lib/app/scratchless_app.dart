@@ -11,6 +11,7 @@ import '../core/models/stop_reason.dart';
 import '../core/models/urge_session_log.dart';
 import '../core/models/weekly_reflection_archive_item.dart';
 import '../core/services/local_notification_service.dart';
+import '../core/services/live_place_alert_service.dart';
 import '../core/services/premium_prompt_service.dart';
 import '../core/services/milestone_service.dart';
 import '../core/services/risky_time_service.dart';
@@ -157,6 +158,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     });
 
     _syncReminderNotifications();
+    _syncLivePlaceAlerts();
   }
 
   Future<void> _persistState() async {
@@ -186,6 +188,14 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
   void _syncReminderNotifications() {
     LocalNotificationService.instance.syncReminderSettings(
       _reminderSettings,
+      riskyTimeInsight: _riskyTimeInsight,
+    );
+  }
+
+  void _syncLivePlaceAlerts() {
+    LivePlaceAlertService.instance.syncMonitoredPlaces(
+      premiumState: _premiumState,
+      riskyPlaces: _riskyPlaces,
       riskyTimeInsight: _riskyTimeInsight,
     );
   }
@@ -309,6 +319,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     });
 
     _persistState();
+    _syncLivePlaceAlerts();
   }
 
   void _saveWeeklyReflectionToHistory() {
@@ -414,6 +425,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     });
 
     _persistState();
+    _syncLivePlaceAlerts();
   }
 
   void _editRiskyPlace(RiskyPlace place) {
@@ -427,6 +439,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     });
 
     _persistState();
+    _syncLivePlaceAlerts();
   }
 
   void _deleteRiskyPlace(String id) {
@@ -435,6 +448,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     });
 
     _persistState();
+    _syncLivePlaceAlerts();
   }
 
   void _acknowledgeSuccessPremiumPrompt() {
