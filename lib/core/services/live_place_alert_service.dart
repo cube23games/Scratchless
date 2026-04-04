@@ -20,18 +20,78 @@ class CurrentPlaceCoordinate {
   });
 }
 
+class LiveAlertDebugEvent {
+  final DateTime createdAt;
+  final String message;
+
+  const LiveAlertDebugEvent({
+    required this.createdAt,
+    required this.message,
+  });
+}
+
+class LiveAlertPlaceDebugItem {
+  final String placeId;
+  final String label;
+  final bool armed;
+  final String status;
+
+  const LiveAlertPlaceDebugItem({
+    required this.placeId,
+    required this.label,
+    required this.armed,
+    required this.status,
+  });
+}
+
+class LiveAlertDebugState {
+  final String permissionLabel;
+  final bool isArmed;
+  final int eligiblePlaceCount;
+  final String? lastEventMessage;
+  final DateTime? lastEventAt;
+  final List<LiveAlertPlaceDebugItem> placeItems;
+  final List<LiveAlertDebugEvent> recentEvents;
+
+  const LiveAlertDebugState({
+    required this.permissionLabel,
+    required this.isArmed,
+    required this.eligiblePlaceCount,
+    required this.lastEventMessage,
+    required this.lastEventAt,
+    required this.placeItems,
+    required this.recentEvents,
+  });
+
+  factory LiveAlertDebugState.empty() {
+    return const LiveAlertDebugState(
+      permissionLabel: 'Off',
+      isArmed: false,
+      eligiblePlaceCount: 0,
+      lastEventMessage: null,
+      lastEventAt: null,
+      placeItems: <LiveAlertPlaceDebugItem>[],
+      recentEvents: <LiveAlertDebugEvent>[],
+    );
+  }
+}
+
 class LivePlaceAlertService {
   LivePlaceAlertService._();
 
   static final LivePlaceAlertService instance = LivePlaceAlertService._();
 
   static const Duration _burstSuppressionWindow = Duration(seconds: 60);
+  static const int _maxRecentEvents = 5;
 
   bool _initialized = false;
   bool _geofenceListenerRegistered = false;
 
   final Map<String, DateTime> _recentEntryHits = <String, DateTime>{};
+  final List<LiveAlertDebugEvent> _recentEvents = <LiveAlertDebugEvent>[];
+
   Map<String, RiskyPlace> _monitoredPlacesById = <String, RiskyPlace>{};
+  List<RiskyPlace> _latestAllRiskyPlaces = <RiskyPlace>[];
   PremiumState _latestPremiumState = PremiumState.free();
   RiskyTimeInsight _latestRiskyTimeInsight = RiskyTimeInsight.empty();
 
@@ -61,6 +121,7 @@ class LivePlaceAlertService {
         await _handleGeofenceEvent(event);
       });
       _geofenceListenerRegistered = true;
+      _logEvent('Geofence listener registered');
     }
   }
 
@@ -124,6 +185,7 @@ class LivePlaceAlertService {
 
     _latestPremiumState = premiumState;
     _latestRiskyTimeInsight = riskyTimeInsight;
+    _latestAllRiskyPlaces = List<RiskyPlace>.from(riskyPlaces);
 
     final places = enabledPremiumPlaces(
       premiumState: premiumState,
@@ -137,6 +199,7 @@ class LivePlaceAlertService {
     await tl.Tracelet.removeGeofences();
 
     if (places.isEmpty) {
+      _logEvent('Monitoring synced: no places armed');
       return;
     }
 
@@ -154,6 +217,31 @@ class LivePlaceAlertService {
     }
 
     await tl.Tracelet.startGeofences();
+    _logEvent('Monitoring synced: ${places.length} place(s) armed');
+  }
+
+  Future<void> refreshMonitoring() async {
+    await syncMonitoredPlaces(
+      premiumState: _latestPremiumState,
+      riskyPlaces: _latestAllRiskyPlaces,
+      riskyTimeInsight: _latestRiskyTimeInsight,
+    );
+  }
+
+  LiveAlertDebugState getDebugState() {
+    final placeItems =
+        _latestAllRiskyPlaces.map(_buildPlaceDebugItem).toList(growable: false);
+
+    return LiveAlertDebugState(
+      permissionLabel: _permissionLabel(_latestPremiumState.livePlaceAlertAccess),
+      isArmed: _monitoredPlacesById.isNotEmpty,
+      eligiblePlaceCount: _monitoredPlacesById.length,
+      lastEventMessage:
+          _recentEvents.isEmpty ? null : _recentEvents.first.message,
+      lastEventAt: _recentEvents.isEmpty ? null : _recentEvents.first.createdAt,
+      placeItems: placeItems,
+      recentEvents: List<LiveAlertDebugEvent>.unmodifiable(_recentEvents),
+    );
   }
 
   Future<bool> handlePlaceEntry({
@@ -165,10 +253,12 @@ class LivePlaceAlertService {
     final current = now ?? DateTime.now();
 
     if (!FeatureGateService.placeAlertsUnlocked(premiumState)) {
+      _logEvent('Not sent: premium inactive for ${place.label}');
       return false;
     }
 
     if (!place.locationAlertsEnabled) {
+      _logEvent('Not sent: live alerts disabled for ${place.label}');
       return false;
     }
 
@@ -179,6 +269,7 @@ class LivePlaceAlertService {
     );
 
     if (!decision.allowed) {
+      _logEvent('Not sent: policy blocked ${place.label}');
       return false;
     }
 
@@ -187,6 +278,7 @@ class LivePlaceAlertService {
     final recentHit = _recentEntryHits[place.id];
     if (recentHit != null &&
         current.difference(recentHit) < _burstSuppressionWindow) {
+      _logEvent('Suppressed duplicate entry for ${place.label}');
       return false;
     }
 
@@ -198,6 +290,7 @@ class LivePlaceAlertService {
 
     if (suppressed) {
       _recentEntryHits[place.id] = current;
+      _logEvent('Suppressed by cooldown for ${place.label}');
       return false;
     }
 
@@ -212,30 +305,106 @@ class LivePlaceAlertService {
     );
 
     _recentEntryHits[place.id] = current;
+    _logEvent('Alert sent for ${place.label}');
     return true;
   }
 
   Future<void> _handleGeofenceEvent(dynamic event) async {
     final identifier = _readEventIdentifier(event);
     if (identifier == null) {
+      _logEvent('Ignored geofence event with no identifier');
       return;
     }
 
     final action = _readEventAction(event);
     if (action != null && action.toUpperCase() != 'ENTER') {
+      _logEvent('Ignored non-entry event for $identifier');
       return;
     }
 
     final place = _monitoredPlacesById[identifier];
     if (place == null) {
+      _logEvent('Entered unknown place $identifier');
       return;
     }
+
+    _logEvent('Entered ${place.label}');
 
     await handlePlaceEntry(
       premiumState: _latestPremiumState,
       place: place,
       riskyTimeInsight: _latestRiskyTimeInsight,
     );
+  }
+
+  LiveAlertPlaceDebugItem _buildPlaceDebugItem(RiskyPlace place) {
+    if (!place.locationAlertsEnabled) {
+      return LiveAlertPlaceDebugItem(
+        placeId: place.id,
+        label: place.label,
+        armed: false,
+        status: 'Blocked: live alerts disabled',
+      );
+    }
+
+    if (place.latitude == null || place.longitude == null) {
+      return LiveAlertPlaceDebugItem(
+        placeId: place.id,
+        label: place.label,
+        armed: false,
+        status: 'Blocked: coordinates missing',
+      );
+    }
+
+    if (!FeatureGateService.placeAlertsUnlocked(_latestPremiumState)) {
+      return LiveAlertPlaceDebugItem(
+        placeId: place.id,
+        label: place.label,
+        armed: false,
+        status: 'Blocked: premium inactive',
+      );
+    }
+
+    if (_latestPremiumState.livePlaceAlertAccess != 'fullBackground') {
+      return LiveAlertPlaceDebugItem(
+        placeId: place.id,
+        label: place.label,
+        armed: false,
+        status: 'Blocked: background permission incomplete',
+      );
+    }
+
+    return LiveAlertPlaceDebugItem(
+      placeId: place.id,
+      label: place.label,
+      armed: true,
+      status: 'Armed',
+    );
+  }
+
+  String _permissionLabel(String access) {
+    switch (access) {
+      case 'fullBackground':
+        return 'Full background';
+      case 'foregroundOnly':
+        return 'Foreground only';
+      default:
+        return 'Off';
+    }
+  }
+
+  void _logEvent(String message) {
+    _recentEvents.insert(
+      0,
+      LiveAlertDebugEvent(
+        createdAt: DateTime.now(),
+        message: message,
+      ),
+    );
+
+    if (_recentEvents.length > _maxRecentEvents) {
+      _recentEvents.removeRange(_maxRecentEvents, _recentEvents.length);
+    }
   }
 
   String? _readEventIdentifier(dynamic event) {
