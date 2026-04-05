@@ -104,6 +104,7 @@ class LivePlaceAlertService {
   PremiumState _latestPremiumState = PremiumState.free();
   RiskyTimeInsight _latestRiskyTimeInsight = RiskyTimeInsight.empty();
   String _lastKnownAccess = 'off';
+  List<RiskyPlace> _latestRiskyPlaces = <RiskyPlace>[];
 
   Future<void> initialize() async {
     if (!_initialized) {
@@ -211,6 +212,7 @@ class LivePlaceAlertService {
     _latestPremiumState =
         premiumState.copyWith(livePlaceAlertAccess: access);
     _latestRiskyTimeInsight = riskyTimeInsight;
+    _latestRiskyPlaces = List<RiskyPlace>.from(riskyPlaces);
 
     if (access != 'fullBackground') {
       _monitoredPlacesById = <String, RiskyPlace>{};
@@ -388,6 +390,49 @@ class LivePlaceAlertService {
       label: place.label,
       armed: true,
       status: 'Armed',
+    );
+  }
+
+
+  LiveAlertDebugState getDebugState() {
+    final placeItems = _latestRiskyPlaces.map((place) {
+      final bool armed = _monitoredPlacesById.containsKey(place.id);
+
+      String status;
+      if (!FeatureGateService.placeAlertsUnlocked(_latestPremiumState)) {
+        status = 'Start Premium to arm this place';
+      } else if (!place.locationAlertsEnabled) {
+        status = 'Turn on live alerts for this place';
+      } else if (place.latitude == null || place.longitude == null) {
+        status = 'Save this place’s location first';
+      } else if (_lastKnownAccess != 'fullBackground') {
+        status = 'Needs one more Android permission step';
+      } else if (armed) {
+        status = 'Armed';
+      } else {
+        status = 'Needs one more Android permission step';
+      }
+
+      return LiveAlertPlaceDebugItem(
+        placeId: place.id,
+        label: place.label,
+        armed: armed,
+        status: status,
+      );
+    }).toList();
+
+    final blockedPlaceCount = placeItems.where((item) => !item.armed).length;
+
+    return LiveAlertDebugState(
+      isArmed: _monitoredPlacesById.isNotEmpty,
+      accessLevel: _lastKnownAccess,
+      permissionLabel: _permissionLabel(_lastKnownAccess),
+      eligiblePlaceCount: _monitoredPlacesById.length,
+      blockedPlaceCount: blockedPlaceCount,
+      topBlocker: _topBlocker(),
+      lastEventMessage: _recentEvents.isEmpty ? null : _recentEvents.first.message,
+      recentEvents: List<LiveAlertDebugEvent>.from(_recentEvents),
+      placeItems: placeItems,
     );
   }
 
