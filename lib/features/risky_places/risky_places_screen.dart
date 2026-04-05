@@ -5,6 +5,8 @@ import '../../core/models/premium_state.dart';
 import '../../core/models/risky_place.dart';
 import '../../core/services/distance_formatter_service.dart';
 import '../../core/services/live_place_alert_service.dart';
+import '../../core/services/place_search_service.dart';
+import 'place_search_screen.dart';
 import '../../core/services/risky_time_service.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
@@ -745,6 +747,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
   late int _radiusMeters;
   late bool _locationAlertsEnabled;
   bool _capturingLocation = false;
+  String? _selectedPlaceAddress;
 
   bool get _isEditing => widget.initialPlace != null;
 
@@ -765,6 +768,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
     );
     _isTopRisk = widget.initialPlace?.isTopRisk ?? false;
     _radiusMeters = widget.initialPlace?.radiusMeters ?? 300;
+    _selectedPlaceAddress = null;
     _locationAlertsEnabled =
         widget.initialPlace?.locationAlertsEnabled ?? false;
   }
@@ -791,6 +795,32 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
       return null;
     }
     return double.tryParse(normalized);
+  }
+
+  Future<void> _searchForPlace() async {
+    final selection = await Navigator.of(context).push<PlaceSearchSelection>(
+      MaterialPageRoute<PlaceSearchSelection>(
+        builder: (_) => const PlaceSearchScreen(),
+        fullscreenDialog: true,
+      ),
+    );
+
+    if (selection == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _labelController.text = selection.label;
+      _latitudeController.text = _formatCoordinate(selection.latitude);
+      _longitudeController.text = _formatCoordinate(selection.longitude);
+      _selectedPlaceAddress = selection.address;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Place selected and coordinates filled.'),
+      ),
+    );
   }
 
   Future<void> _useCurrentLocation() async {
@@ -1061,6 +1091,25 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                 ),
                 const SizedBox(height: 12),
                 AppButton(
+                  label: 'Search for a place',
+                  icon: Icons.search_rounded,
+                  isPrimary: false,
+                  onPressed: _searchForPlace,
+                ),
+                if (_selectedPlaceAddress != null &&
+                    _selectedPlaceAddress!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Selected place: $_selectedPlaceAddress',
+                    style: const TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                AppButton(
                   label: _capturingLocation
                       ? 'Capturing current location...'
                       : 'Use my current location',
@@ -1094,7 +1143,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Use your current location at the risky stop, or enter the coordinates manually if you already know them.',
+                  'Search for a place, use your current location at the risky stop, or enter coordinates manually if you already know them.',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 12,
