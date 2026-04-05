@@ -169,8 +169,8 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
 
     if (_debugState.eligiblePlaceCount > 0) {
       return _debugState.eligiblePlaceCount == 1
-          ? '1 place is ready for live alerts.'
-          : '${_debugState.eligiblePlaceCount} places are ready for live alerts.';
+          ? 'First place ready for live alerts.'
+          : '${_debugState.eligiblePlaceCount} places ready for live alerts.';
     }
 
     final placesWithLocation = _places
@@ -326,6 +326,14 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
 
   String _primarySetupState(RiskyPlace place) {
     return _friendlyPlaceState(_placeDebugStatus(place.id));
+  }
+
+  bool _isPlaceReady(RiskyPlace place) {
+    return _primarySetupState(place) == 'Ready';
+  }
+
+  String _readyBadgeLabel(RiskyPlace place) {
+    return _isPlaceReady(place) ? 'Ready' : '';
   }
 
   String _secondarySetupExplanation(RiskyPlace place) {
@@ -927,8 +935,12 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                               ),
                             ),
                           ),
+                          if (_isPlaceReady(place)) ...[
+                            _buildSignalChip(_readyBadgeLabel(place), accent: true),
+                            const SizedBox(width: 8),
+                          ],
                           if (place.isTopRisk)
-                            _buildSignalChip('Top risk', accent: true),
+                            _buildSignalChip('Top risk'),
                         ],
                       ),
                       if (place.note.trim().isNotEmpty) ...[
@@ -944,9 +956,10 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                       const SizedBox(height: 12),
                       Text(
                         _primarySetupState(place),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
+                          color: _isPlaceReady(place) ? AppTheme.accent : null,
                         ),
                       ),
                       const SizedBox(height: 4),
