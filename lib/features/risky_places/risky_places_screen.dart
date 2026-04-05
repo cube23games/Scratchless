@@ -68,6 +68,78 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
     return 'Status unavailable';
   }
 
+  String _statusHeadline() {
+    if (_debugState.isArmed && _debugState.eligiblePlaceCount > 0) {
+      return 'Live alerts are ready';
+    }
+
+    final blocker = _debugState.topBlocker;
+    if (blocker == 'Finish live alerts in Android settings') {
+      return 'Live alerts are almost ready';
+    }
+    if (blocker == 'Save a location for at least one place') {
+      return 'Live alerts need a saved place location';
+    }
+    if (blocker == 'Turn on live alerts for a saved place') {
+      return 'Live alerts not started';
+    }
+    if (blocker == 'Need Premium') {
+      return 'Premium is needed for live alerts';
+    }
+    return 'Live alerts need attention';
+  }
+
+  String _statusActionLine() {
+    final blocker = _debugState.topBlocker;
+    if (blocker != null && blocker.isNotEmpty) {
+      return blocker;
+    }
+
+    if (_debugState.isArmed && _debugState.eligiblePlaceCount > 0) {
+      return 'Everything is set up for live alerts';
+    }
+
+    return 'Finish setup to arm at least one place';
+  }
+
+  String _statusDiagnosticsLine() {
+    return 'Permission: ${_debugState.permissionLabel} • Armed: ${_debugState.eligiblePlaceCount} • Blocked: ${_debugState.blockedPlaceCount}';
+  }
+
+  String _friendlyPlaceState(String rawStatus) {
+    switch (rawStatus) {
+      case 'Armed':
+        return 'Ready';
+      case 'Needs one more Android permission step':
+        return 'Almost ready';
+      case 'Save this place’s location first':
+        return 'Location needed';
+      case 'Turn on live alerts for this place':
+        return 'Live alerts off';
+      case 'Start Premium to arm this place':
+        return 'Premium needed';
+      default:
+        return 'Needs attention';
+    }
+  }
+
+  String _friendlyPlaceDetail(String rawStatus) {
+    switch (rawStatus) {
+      case 'Armed':
+        return 'This place is armed for live alerts.';
+      case 'Needs one more Android permission step':
+        return 'Finish Android permission setup to arm this place.';
+      case 'Save this place’s location first':
+        return 'Save this place’s location first.';
+      case 'Turn on live alerts for this place':
+        return 'Turn on live alerts for this place.';
+      case 'Start Premium to arm this place':
+        return 'Start Premium to arm this place.';
+      default:
+        return rawStatus;
+    }
+  }
+
   String _eventTimeLabel(DateTime time) {
     final hour = time.hour.toString().padLeft(2, '0');
     final minute = time.minute.toString().padLeft(2, '0');
@@ -208,32 +280,28 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _debugState.isArmed
-                      ? 'Live alerts armed'
-                      : 'Live alerts are not ready yet',
+                  _statusHeadline(),
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: 22,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Permission: ${_debugState.permissionLabel} • Armed: ${_debugState.eligiblePlaceCount} • Blocked: ${_debugState.blockedPlaceCount}',
+                  _statusActionLine(),
                   style: const TextStyle(
-                    color: AppTheme.mutedText,
-                    fontSize: 14,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                if (_debugState.topBlocker != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Top blocker: ${_debugState.topBlocker}',
-                    style: const TextStyle(
-                      color: AppTheme.mutedText,
-                      fontSize: 14,
-                    ),
+                const SizedBox(height: 8),
+                Text(
+                  _statusDiagnosticsLine(),
+                  style: const TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 13,
                   ),
-                ],
+                ),
                 if (_debugState.lastEventMessage != null) ...[
                   const SizedBox(height: 8),
                   Text(
@@ -361,11 +429,19 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Live alert setup: ${_placeDebugStatus(place.id)}',
+                        'Setup state: ${_friendlyPlaceState(_placeDebugStatus(place.id))}',
                         style: const TextStyle(
                           color: AppTheme.mutedText,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _friendlyPlaceDetail(_placeDebugStatus(place.id)),
+                        style: const TextStyle(
+                          color: AppTheme.mutedText,
+                          fontSize: 12,
                         ),
                       ),
                       const SizedBox(height: 8),
