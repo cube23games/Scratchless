@@ -388,6 +388,63 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
     );
   }
 
+  int _savedPlaceCount() {
+    return _places.length;
+  }
+
+  int _readyPlaceCount() {
+    return _places.where((place) => _primarySetupState(place) == 'Ready').length;
+  }
+
+  int _needLocationCount() {
+    return _places
+        .where((place) => _primarySetupState(place) == 'Location needed')
+        .length;
+  }
+
+  int _alertsOffCount() {
+    return _places
+        .where((place) => _primarySetupState(place) == 'Live alerts off')
+        .length;
+  }
+
+  Widget _buildSummaryMetric(String label, int value) {
+    return SizedBox(
+      width: 150,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.mutedText.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.mutedText.withOpacity(0.12),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$value',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppTheme.mutedText,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   bool _hasEnabledPlaces() {
     return _places.any((place) => place.locationAlertsEnabled);
   }
@@ -860,6 +917,35 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
               ],
             ),
           ),
+          if (_places.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Quick glance',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      _buildSummaryMetric('Saved', _savedPlaceCount()),
+                      _buildSummaryMetric('Ready', _readyPlaceCount()),
+                      _buildSummaryMetric('Need location', _needLocationCount()),
+                      _buildSummaryMetric('Alerts off', _alertsOffCount()),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           AppButton(
             label: _addPlaceButtonLabel(),
