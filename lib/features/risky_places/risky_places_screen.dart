@@ -358,7 +358,32 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
     if (_debugState.isArmed && _debugState.eligiblePlaceCount > 0) {
       return 'ScratchLess can now watch for your saved risky places and warn you before a stop turns automatic.';
     }
+    if (_places.isEmpty) {
+      return 'Start with one place and ScratchLess will help you build from there.';
+    }
     return 'Live alerts work best when you finish the three setup steps below.';
+  }
+
+  bool _isFirstPlaceFlow() {
+    return _places.isEmpty;
+  }
+
+  String _emptyStateHeadline() {
+    return 'Add the first place that tends to turn into a ticket';
+  }
+
+  String _emptyStateBody() {
+    return 'Start with one gas station, store, or stop you usually talk yourself into.';
+  }
+
+  String _emptyStateBenefitLine() {
+    return 'ScratchLess can only warn you about places you name first.';
+  }
+
+  String _addPlaceButtonLabel() {
+    return _isFirstPlaceFlow()
+        ? 'Add your first risky place'
+        : 'Add risky place';
   }
 
   Widget _setupStepRow({
@@ -554,7 +579,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                 final step1Detail = step1Done
                     ? 'At least one saved place is selected for live alerts.'
                     : (_places.isEmpty
-                        ? 'Add a risky place to begin.'
+                        ? 'Add your first risky place to begin.'
                         : 'Turn on live alerts for one saved place.');
 
                 final step2Detail = step2Done
@@ -725,19 +750,56 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
           ),
           const SizedBox(height: 12),
           AppButton(
-            label: 'Add risky place',
+            label: _addPlaceButtonLabel(),
             icon: Icons.add_location_alt_rounded,
             onPressed: () => _openAddPlace(context),
           ),
           const SizedBox(height: 12),
           if (displayPlaces.isEmpty)
-            const AppCard(
-              child: Text(
-                'No risky places saved yet. Add the stops most likely to turn into a ticket purchase so ScratchLess can keep them visible.',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Start here',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _emptyStateHeadline(),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _emptyStateBody(),
+                    style: const TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _emptyStateBenefitLine(),
+                    style: const TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  AppButton(
+                    label: 'Add your first risky place',
+                    icon: Icons.add_location_alt_rounded,
+                    onPressed: () => _openAddPlace(context),
+                  ),
+                ],
               ),
             )
           else
