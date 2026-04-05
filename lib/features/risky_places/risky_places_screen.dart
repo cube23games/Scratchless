@@ -42,6 +42,7 @@ class RiskyPlacesScreen extends StatefulWidget {
 
 class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
   late List<RiskyPlace> _places;
+  String _selectedFilter = 'all';
   LiveAlertDebugState _debugState = LiveAlertDebugState.empty();
 
   @override
@@ -445,6 +446,76 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
     );
   }
 
+  bool _isPlaceNeedsSetup(RiskyPlace place) {
+    return _primarySetupState(place) != 'Ready';
+  }
+
+  bool _placeFilterMatches(RiskyPlace place) {
+    switch (_selectedFilter) {
+      case 'needsSetup':
+        return _isPlaceNeedsSetup(place);
+      case 'ready':
+        return _primarySetupState(place) == 'Ready';
+      case 'topRisk':
+        return place.isTopRisk;
+      default:
+        return true;
+    }
+  }
+
+  int _sortRank(RiskyPlace place) {
+    final ready = _primarySetupState(place) == 'Ready';
+
+    if (place.isTopRisk && !ready) {
+      return 0;
+    }
+    if (place.isTopRisk && ready) {
+      return 1;
+    }
+    if (!ready) {
+      return 2;
+    }
+    return 3;
+  }
+
+  List<RiskyPlace> get _filteredPlaces {
+    final items =
+        _places.where((place) => _placeFilterMatches(place)).toList();
+
+    items.sort((a, b) {
+      final rankCompare = _sortRank(a).compareTo(_sortRank(b));
+      if (rankCompare != 0) {
+        return rankCompare;
+      }
+      return a.label.toLowerCase().compareTo(b.label.toLowerCase());
+    });
+
+    return items;
+  }
+
+  String _visiblePlaceCountLabel() {
+    final visible = _filteredPlaces.length;
+    final total = _places.length;
+
+    if (visible == total) {
+      return total == 1 ? 'Showing 1 place' : 'Showing all $total places';
+    }
+
+    return 'Showing $visible of $total places';
+  }
+
+  Widget _buildFilterChip(String label, String value) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: _selectedFilter == value,
+      onSelected: (_) {
+        setState(() {
+          _selectedFilter = value;
+        });
+      },
+    );
+  }
+
   bool _hasEnabledPlaces() {
     return _places.any((place) => place.locationAlertsEnabled);
   }
@@ -569,16 +640,6 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
     return '$hour:$minute';
   }
 
-  List<RiskyPlace> get _sortedPlaces {
-    final items = [..._places];
-    items.sort((a, b) {
-      if (a.isTopRisk == b.isTopRisk) {
-        return a.label.toLowerCase().compareTo(b.label.toLowerCase());
-      }
-      return a.isTopRisk ? -1 : 1;
-    });
-    return items;
-  }
 
   Future<void> _openAddPlace(BuildContext context) async {
     final beforePlaceCount = _places.length;
@@ -682,7 +743,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final displayPlaces = _sortedPlaces;
+    final displayPlaces = _filteredPlaces;
 
     return Scaffold(
       appBar: AppBar(
@@ -945,6 +1006,42 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 12),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Filter places',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _visiblePlaceCountLabel(),
+                    style: const TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      _buildFilterChip('All', 'all'),
+                      _buildFilterChip('Needs setup', 'needsSetup'),
+                      _buildFilterChip('Ready', 'ready'),
+                      _buildFilterChip('Top risk', 'topRisk'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ],
           const SizedBox(height: 12),
           AppButton(
@@ -953,7 +1050,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
             onPressed: () => _openAddPlace(context),
           ),
           const SizedBox(height: 12),
-          if (displayPlaces.isEmpty)
+          if (_places.isEmpty)
             AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -996,6 +1093,40 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                     label: 'Add your first risky place',
                     icon: Icons.add_location_alt_rounded,
                     onPressed: () => _openAddPlace(context),
+                  ),
+                ],
+              ),
+            )
+          else if (displayPlaces.isEmpty)
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'No places match this filter',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Try a different filter to see the rest of your saved places.',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  AppButton(
+                    label: 'Show all places',
+                    icon: Icons.filter_alt_off_rounded,
+                    isPrimary: false,
+                    onPressed: () {
+                      setState(() {
+                        _selectedFilter = 'all';
+                      });
+                    },
                   ),
                 ],
               ),
