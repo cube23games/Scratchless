@@ -40,7 +40,7 @@ class RiskyPlacesScreen extends StatefulWidget {
   State<RiskyPlacesScreen> createState() => _RiskyPlacesScreenState();
 }
 
-class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
+class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindingObserver {
   late List<RiskyPlace> _places;
   String _selectedFilter = 'all';
   LiveAlertDebugState _debugState = LiveAlertDebugState.empty();
@@ -48,6 +48,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _places = List<RiskyPlace>.from(widget.places);
     _debugState = LivePlaceAlertService.instance.getDebugState();
     _refreshLiveAlertDebugState();
@@ -67,6 +68,20 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
     setState(() {
       _debugState = LivePlaceAlertService.instance.getDebugState();
     });
+  }
+
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshLiveAlertDebugState();
+    }
   }
 
   String _placeDebugStatus(String placeId) {
@@ -620,7 +635,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
   }
 
   bool _backgroundReady() {
-    return widget.premiumState.livePlaceAlertAccess == 'fullBackground';
+    return _debugState.accessLevel == 'fullBackground';
   }
 
   String _setupHeadline() {
@@ -630,7 +645,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
     if (_debugState.isArmed && _debugState.eligiblePlaceCount > 0) {
       return 'Live alerts are ready to help';
     }
-    if (widget.premiumState.livePlaceAlertAccess == 'foregroundOnly') {
+    if (_debugState.accessLevel == 'foregroundOnly') {
       return 'One more step and live alerts will be ready';
     }
     return 'Set up live alerts in 3 steps';
@@ -901,7 +916,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                     ? 'Premium unlocks the final Android permission step.'
                     : step3Done
                         ? 'Android permission is ready.'
-                        : widget.premiumState.livePlaceAlertAccess == 'foregroundOnly'
+                        : _debugState.accessLevel == 'foregroundOnly'
                             ? 'Finish the Android settings step to turn live alerts on.'
                             : 'This step comes after you save a place and its location.';
 

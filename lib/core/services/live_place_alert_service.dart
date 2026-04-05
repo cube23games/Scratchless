@@ -45,6 +45,7 @@ class LiveAlertPlaceDebugItem {
 }
 
 class LiveAlertDebugState {
+  final String accessLevel;
   final String permissionLabel;
   final bool isArmed;
   final int eligiblePlaceCount;
@@ -56,6 +57,7 @@ class LiveAlertDebugState {
   final List<LiveAlertDebugEvent> recentEvents;
 
   const LiveAlertDebugState({
+    required this.accessLevel,
     required this.permissionLabel,
     required this.isArmed,
     required this.eligiblePlaceCount,
@@ -69,6 +71,7 @@ class LiveAlertDebugState {
 
   factory LiveAlertDebugState.empty() {
     return const LiveAlertDebugState(
+      accessLevel: 'off',
       permissionLabel: 'Off',
       isArmed: false,
       eligiblePlaceCount: 0,
@@ -100,6 +103,7 @@ class LivePlaceAlertService {
   List<RiskyPlace> _latestAllRiskyPlaces = <RiskyPlace>[];
   PremiumState _latestPremiumState = PremiumState.free();
   RiskyTimeInsight _latestRiskyTimeInsight = RiskyTimeInsight.empty();
+  String _lastKnownAccess = 'off';
 
   Future<void> initialize() async {
     if (!_initialized) {
@@ -134,6 +138,19 @@ class LivePlaceAlertService {
   Future<int> requestLocationPermission() async {
     await initialize();
     return await tl.Tracelet.requestPermission();
+  }
+
+  Future<String> currentAccessLevel() async {
+    await initialize();
+
+    try {
+      final status = await tl.Tracelet.getPermissionStatus();
+      final access = _normalizePermissionStatus(status);
+      _lastKnownAccess = access;
+      return access;
+    } catch (_) {
+      return _lastKnownAccess;
+    }
   }
 
   Future<int> getPermissionStatus() async {
@@ -189,12 +206,21 @@ class LivePlaceAlertService {
   }) async {
     await initialize();
 
-    _latestPremiumState = premiumState;
+    final access = await currentAccessLevel();
+    _lastKnownAccess = access;
+    _latestPremiumState =
+        premiumState.copyWith(livePlaceAlertAccess: access);
     _latestRiskyTimeInsight = riskyTimeInsight;
-    _latestAllRiskyPlaces = List<RiskyPlace>.from(riskyPlaces);
+
+    if (access != 'fullBackground') {
+      _monitoredPlacesById = <String, RiskyPlace>{};
+      await tl.Tracelet.removeGeofences();
+      _logEvent('Permission sync: ${_permissionLabel(access)}');
+      return;
+    }
 
     final places = enabledPremiumPlaces(
-      premiumState: premiumState,
+      premiumState: _latestPremiumState,
       riskyPlaces: riskyPlaces,
     );
 
@@ -223,35 +249,9 @@ class LivePlaceAlertService {
     }
 
     await tl.Tracelet.startGeofences();
-    _logEvent('${places.length} place(s) ready for live alerts');
+    _logEvent('${places.length} place(s) armed after permission sync');
   }
 
-  Future<void> refreshMonitoring() async {
-    await syncMonitoredPlaces(
-      premiumState: _latestPremiumState,
-      riskyPlaces: _latestAllRiskyPlaces,
-      riskyTimeInsight: _latestRiskyTimeInsight,
-    );
-  }
-
-  LiveAlertDebugState getDebugState() {
-    final placeItems =
-        _latestAllRiskyPlaces.map(_buildPlaceDebugItem).toList(growable: false);
-    final blockedPlaceCount = placeItems.where((item) => !item.armed).length;
-
-    return LiveAlertDebugState(
-      permissionLabel: _permissionLabel(_latestPremiumState.livePlaceAlertAccess),
-      isArmed: _monitoredPlacesById.isNotEmpty,
-      eligiblePlaceCount: _monitoredPlacesById.length,
-      blockedPlaceCount: blockedPlaceCount,
-      topBlocker: _topBlocker(),
-      lastEventMessage:
-          _recentEvents.isEmpty ? null : _recentEvents.first.message,
-      lastEventAt: _recentEvents.isEmpty ? null : _recentEvents.first.createdAt,
-      placeItems: placeItems,
-      recentEvents: List<LiveAlertDebugEvent>.unmodifiable(_recentEvents),
-    );
-  }
 
   Future<bool> handlePlaceEntry({
     required PremiumState premiumState,
@@ -389,6 +389,16 @@ class LivePlaceAlertService {
       armed: true,
       status: 'Armed',
     );
+  }
+
+  String _normalizePermissionStatus(int status) {
+    if (status == 3) {
+      return 'fullBackground';
+    }
+    if (status == 2) {
+      return 'foregroundOnly';
+    }
+    return 'off';
   }
 
   String _permissionLabel(String access) {
