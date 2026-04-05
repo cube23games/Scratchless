@@ -126,7 +126,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
 
   String _statusHeadline() {
     if (_debugState.isArmed && _debugState.eligiblePlaceCount > 0) {
-      return 'Live alerts are ready';
+      return 'Live alerts are ready to help';
     }
 
     final blocker = _debugState.topBlocker;
@@ -134,15 +134,15 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
       return 'Live alerts are almost ready';
     }
     if (blocker == 'Save a location for at least one place') {
-      return 'Live alerts need a saved place location';
+      return 'Save one place location to keep going';
     }
     if (blocker == 'Turn on live alerts for a saved place') {
-      return 'Live alerts not started';
+      return 'Live alerts are ready to set up';
     }
     if (blocker == 'Need Premium') {
-      return 'Premium is needed for live alerts';
+      return 'Premium unlocks live alerts';
     }
-    return 'Live alerts need attention';
+    return 'Live alerts need one more step';
   }
 
   String _statusActionLine() {
@@ -152,10 +152,10 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
     }
 
     if (_debugState.isArmed && _debugState.eligiblePlaceCount > 0) {
-      return 'Everything is set up for live alerts';
+      return 'Everything is set up for live alerts.';
     }
 
-    return 'Finish setup to arm at least one place';
+    return 'Finish one place setup to turn live alerts on.';
   }
 
   String _statusDiagnosticsLine() {
@@ -251,15 +251,15 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
   String _friendlyPlaceDetail(String rawStatus) {
     switch (rawStatus) {
       case 'Armed':
-        return 'This place is armed for live alerts.';
+        return 'This place is ready for live alerts.';
       case 'Needs one more Android permission step':
-        return 'Finish Android permission setup to arm this place.';
+        return 'Finish the Android step to turn live alerts on for this place.';
       case 'Save this place’s location first':
         return 'Save this place’s location first.';
       case 'Turn on live alerts for this place':
         return 'Turn on live alerts for this place.';
       case 'Start Premium to arm this place':
-        return 'Start Premium to arm this place.';
+        return 'Start Premium to turn live alerts on for this place.';
       default:
         return rawStatus;
     }
@@ -343,7 +343,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
       return 'Start Premium to unlock live alerts';
     }
     if (_debugState.isArmed && _debugState.eligiblePlaceCount > 0) {
-      return 'Live alerts are ready';
+      return 'Live alerts are ready to help';
     }
     if (widget.premiumState.livePlaceAlertAccess == 'foregroundOnly') {
       return 'One more step and live alerts will be ready';
@@ -353,15 +353,15 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
 
   String _setupBody() {
     if (!widget.premiumState.isPremium) {
-      return 'Premium unlocks live alerts for your saved risky places.';
+      return 'Premium adds live alerts for the risky places you save.';
     }
     if (_debugState.isArmed && _debugState.eligiblePlaceCount > 0) {
-      return 'ScratchLess can now watch for your saved risky places and warn you before a stop turns automatic.';
+      return 'ScratchLess can now watch your saved risky places and nudge you before a stop becomes automatic.';
     }
     if (_places.isEmpty) {
-      return 'Start with one place and ScratchLess will help you build from there.';
+      return 'Start with one place and build from there.';
     }
-    return 'Live alerts work best when you finish the three setup steps below.';
+    return 'These three steps are the quickest way to get live alerts working.';
   }
 
   bool _isFirstPlaceFlow() {
@@ -377,7 +377,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
   }
 
   String _emptyStateBenefitLine() {
-    return 'ScratchLess can only warn you about places you name first.';
+    return 'ScratchLess can only help with the places you name first.';
   }
 
   String _addPlaceButtonLabel() {
@@ -547,7 +547,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Keep the stores, routes, and stops most likely to turn into a ticket purchase visible.',
+                  'Keep the stops that can quietly turn into a ticket purchase visible.',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
@@ -555,7 +555,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Use this watchlist to flag the stops that are easiest to rationalize and hardest to ignore in the moment.',
+                  'This watchlist helps you notice the places that are easiest to shrug off and hardest to resist in the moment.',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 14,
@@ -577,28 +577,28 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                 final step3Active = step1Done && step2Done && !step3Done;
 
                 final step1Detail = step1Done
-                    ? 'At least one saved place is selected for live alerts.'
+                    ? 'At least one saved place is turned on for live alerts.'
                     : (_places.isEmpty
                         ? 'Add your first risky place to begin.'
                         : 'Turn on live alerts for one saved place.');
 
                 final step2Detail = step2Done
-                    ? 'A saved place location is ready.'
-                    : 'Use current location at the stop or enter coordinates manually.';
+                    ? 'One saved place already has a location.'
+                    : 'Use your current location at the stop, search for it, or enter coordinates manually.';
 
                 final step3Detail = !widget.premiumState.isPremium
                     ? 'Premium unlocks the final Android permission step.'
                     : step3Done
-                        ? 'Android background permission is ready.'
+                        ? 'Android permission is ready.'
                         : widget.premiumState.livePlaceAlertAccess == 'foregroundOnly'
-                            ? 'Finish the Android settings step to arm live alerts.'
+                            ? 'Finish the Android settings step to turn live alerts on.'
                             : 'This step comes after you save a place and its location.';
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Live alert setup',
+                      'Live alert setup path',
                       style: TextStyle(
                         color: AppTheme.mutedText,
                         fontSize: 13,
@@ -651,7 +651,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Live alert status',
+                  'Live alert progress',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 13,
@@ -716,7 +716,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Recent live alert events',
+                  'Recent live alert activity',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 13,
@@ -726,7 +726,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                 const SizedBox(height: 8),
                 if (_debugState.recentEvents.isEmpty)
                   const Text(
-                    'No live alert events yet.',
+                    'No live alert activity yet.',
                     style: TextStyle(
                       color: AppTheme.mutedText,
                       fontSize: 14,
@@ -1282,7 +1282,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Name the stop you want to keep visible.',
+                  'Name the stop you want to keep front of mind.',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
@@ -1324,7 +1324,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Search, capture your current spot, or enter coordinates manually.',
+                  'Search for the place, use your current spot, or enter coordinates manually.',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 14,
@@ -1384,7 +1384,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Manual coordinates are the fallback when search or current location are not enough.',
+                  'Manual coordinates are here when search or current location are not enough.',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 12,
@@ -1426,7 +1426,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Check that the pin and alert area look right before saving.',
+                    'Take one last look at the pin and alert area before saving.',
                     style: TextStyle(
                       color: AppTheme.mutedText,
                       fontSize: 14,
@@ -1469,7 +1469,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    'Tap confirm if this stop is large or close to other stores.',
+                    'Use map confirm if this stop is large or close to other stores.',
                     style: TextStyle(
                       color: AppTheme.mutedText,
                       fontSize: 12,
@@ -1501,7 +1501,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Choose how tight or wide the live alert area should be.',
+                  'Choose how tight or wide the alert area should feel.',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 14,
@@ -1546,7 +1546,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Live place alerts'),
                   subtitle: const Text(
-                    'Use this stop in the live alert setup when Premium and Android permissions are ready.',
+                    'Use this stop for live alerts when Premium and Android permissions are ready.',
                   ),
                   value: _locationAlertsEnabled,
                   onChanged: (value) {
@@ -1559,7 +1559,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Mark as top risk'),
                   subtitle: const Text(
-                    'Keep this place surfaced first and use stronger alert wording later.',
+                    'Keep this place surfaced first and use stronger support wording later.',
                   ),
                   value: _isTopRisk,
                   onChanged: (value) {
