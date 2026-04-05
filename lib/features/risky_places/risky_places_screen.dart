@@ -848,6 +848,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
         builder: (_) => PlacePinConfirmScreen(
           initialPoint: draftPoint,
           placeLabel: _labelController.text.trim(),
+          radiusMeters: _radiusMeters,
         ),
         fullscreenDialog: true,
       ),
@@ -1223,6 +1224,24 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                     child: PlaceMapPreview(
                       latitude: previewPoint.latitude,
                       longitude: previewPoint.longitude,
+                      radiusMeters: _radiusMeters,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Alert radius: ${DistanceFormatterService.usPlaceRadiusLabel(_radiusMeters)}',
+                    style: const TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Check the pin if this stop is large or close to other stores.',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 12,
                     ),
                   ),
                   const SizedBox(height: 12),

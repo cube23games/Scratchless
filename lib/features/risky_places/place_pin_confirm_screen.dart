@@ -3,17 +3,20 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../app/app_theme.dart';
+import '../../core/services/distance_formatter_service.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 
 class PlacePinConfirmScreen extends StatefulWidget {
   final LatLng initialPoint;
   final String placeLabel;
+  final int radiusMeters;
 
   const PlacePinConfirmScreen({
     super.key,
     required this.initialPoint,
     required this.placeLabel,
+    required this.radiusMeters,
   });
 
   @override
@@ -30,6 +33,16 @@ class _PlacePinConfirmScreenState extends State<PlacePinConfirmScreen> {
   }
 
   String _coordLabel(double value) => value.toStringAsFixed(6);
+
+  String _confidenceHint() {
+    if (widget.radiusMeters <= 150) {
+      return 'This is a tighter alert area. Check the pin if nearby stores are close together.';
+    }
+    if (widget.radiusMeters <= 300) {
+      return 'Exact enough for most live alerts. Check the pin if the stop is large or close to other stores.';
+    }
+    return 'This is a wider alert area. Fine-tune the pin if you want a tighter live alert zone.';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +80,7 @@ class _PlacePinConfirmScreenState extends State<PlacePinConfirmScreen> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Tap the map to move the saved point, then use this location when it looks right.',
+                        'Tap the map to move the center point. The circle shows the live alert area.',
                         style: TextStyle(
                           color: AppTheme.mutedText,
                           fontSize: 14,
@@ -96,6 +109,19 @@ class _PlacePinConfirmScreenState extends State<PlacePinConfirmScreen> {
                           urlTemplate:
                               'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                           userAgentPackageName: 'com.cube23.scratchless',
+                        ),
+                        CircleLayer(
+                          circles: [
+                            CircleMarker(
+                              point: _selectedPoint,
+                              radius: widget.radiusMeters.toDouble(),
+                              useRadiusInMeter: true,
+                              color:
+                                  Theme.of(context).colorScheme.primary.withOpacity(0.16),
+                              borderColor: Theme.of(context).colorScheme.primary,
+                              borderStrokeWidth: 2,
+                            ),
+                          ],
                         ),
                         MarkerLayer(
                           markers: [
@@ -134,6 +160,23 @@ class _PlacePinConfirmScreenState extends State<PlacePinConfirmScreen> {
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Alert radius: ${DistanceFormatterService.usPlaceRadiusLabel(widget.radiusMeters)}',
+                        style: const TextStyle(
+                          color: AppTheme.mutedText,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _confidenceHint(),
+                        style: const TextStyle(
+                          color: AppTheme.mutedText,
+                          fontSize: 13,
                         ),
                       ),
                     ],
