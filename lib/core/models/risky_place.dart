@@ -7,6 +7,7 @@ class RiskyPlace {
   final bool locationAlertsEnabled;
   final double? latitude;
   final double? longitude;
+  final String locationSource;
 
   const RiskyPlace({
     required this.id,
@@ -17,6 +18,7 @@ class RiskyPlace {
     this.locationAlertsEnabled = false,
     this.latitude,
     this.longitude,
+    this.locationSource = 'manual',
   });
 
   RiskyPlace copyWith({
@@ -28,6 +30,7 @@ class RiskyPlace {
     bool? locationAlertsEnabled,
     double? latitude,
     double? longitude,
+    String? locationSource,
   }) {
     return RiskyPlace(
       id: id ?? this.id,
@@ -39,6 +42,7 @@ class RiskyPlace {
           locationAlertsEnabled ?? this.locationAlertsEnabled,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      locationSource: locationSource ?? this.locationSource,
     );
   }
 
@@ -52,6 +56,7 @@ class RiskyPlace {
       'locationAlertsEnabled': locationAlertsEnabled,
       'latitude': latitude,
       'longitude': longitude,
+      'locationSource': locationSource,
     };
   }
 
@@ -65,6 +70,7 @@ class RiskyPlace {
       locationAlertsEnabled: json['locationAlertsEnabled'] == true,
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
+      locationSource: json['locationSource']?.toString() ?? 'manual',
     );
   }
 }

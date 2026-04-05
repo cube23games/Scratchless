@@ -77,6 +77,53 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
     return 'Status unavailable';
   }
 
+  String _sourceBadgeLabel(String source) {
+    switch (source) {
+      case 'search':
+        return 'Search';
+      case 'currentLocation':
+        return 'Current location';
+      case 'adjustedOnMap':
+        return 'Adjusted on map';
+      default:
+        return 'Manual';
+    }
+  }
+
+  String _confidenceHint({
+    required String source,
+    required int radiusMeters,
+    required bool hasCoordinates,
+  }) {
+    if (!hasCoordinates) {
+      return 'Save a location before relying on live alerts.';
+    }
+
+    String base;
+    switch (source) {
+      case 'search':
+        base = 'Usually good — check the pin near clustered stores.';
+        break;
+      case 'currentLocation':
+        base = 'Best when captured at the exact stop.';
+        break;
+      case 'adjustedOnMap':
+        base = 'User-confirmed on map.';
+        break;
+      default:
+        base = 'Review carefully before relying on live alerts.';
+        break;
+    }
+
+    if (radiusMeters <= 150) {
+      return '$base Tighter radius.';
+    }
+    if (radiusMeters >= 500) {
+      return '$base Wider alert area.';
+    }
+    return base;
+  }
+
   String _statusHeadline() {
     if (_debugState.isArmed && _debugState.eligiblePlaceCount > 0) {
       return 'Live alerts are ready';
@@ -704,6 +751,23 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                           fontSize: 12,
                         ),
                       ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Source: ${_sourceBadgeLabel(place.locationSource)}',
+                        style: const TextStyle(
+                          color: AppTheme.mutedText,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Confidence: ${_confidenceHint(source: place.locationSource, radiusMeters: place.radiusMeters, hasCoordinates: place.latitude != null && place.longitude != null)}',
+                        style: const TextStyle(
+                          color: AppTheme.mutedText,
+                          fontSize: 12,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Text(
                         place.isTopRisk ? 'Top risk place' : 'Tap to edit',
@@ -749,6 +813,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
   late bool _isTopRisk;
   late int _radiusMeters;
   late bool _locationAlertsEnabled;
+  late String _locationSource;
   bool _capturingLocation = false;
   String? _selectedPlaceAddress;
 
@@ -771,6 +836,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
     );
     _isTopRisk = widget.initialPlace?.isTopRisk ?? false;
     _radiusMeters = widget.initialPlace?.radiusMeters ?? 300;
+    _locationSource = widget.initialPlace?.locationSource ?? 'manual';
     _selectedPlaceAddress = null;
     _locationAlertsEnabled =
         widget.initialPlace?.locationAlertsEnabled ?? false;
@@ -790,6 +856,53 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
       return '';
     }
     return value.toStringAsFixed(6);
+  }
+
+  String _sourceBadgeLabel(String source) {
+    switch (source) {
+      case 'search':
+        return 'Search';
+      case 'currentLocation':
+        return 'Current location';
+      case 'adjustedOnMap':
+        return 'Adjusted on map';
+      default:
+        return 'Manual';
+    }
+  }
+
+  String _confidenceHint() {
+    final hasCoordinates =
+        _parseCoordinate(_latitudeController.text) != null &&
+        _parseCoordinate(_longitudeController.text) != null;
+
+    if (!hasCoordinates) {
+      return 'Save a location before relying on live alerts.';
+    }
+
+    String base;
+    switch (_locationSource) {
+      case 'search':
+        base = 'Usually good — check the pin near clustered stores.';
+        break;
+      case 'currentLocation':
+        base = 'Best when captured at the exact stop.';
+        break;
+      case 'adjustedOnMap':
+        base = 'User-confirmed on map.';
+        break;
+      default:
+        base = 'Review carefully before relying on live alerts.';
+        break;
+    }
+
+    if (_radiusMeters <= 150) {
+      return '$base Tighter radius.';
+    }
+    if (_radiusMeters >= 500) {
+      return '$base Wider alert area.';
+    }
+    return base;
   }
 
   double? _parseCoordinate(String raw) {
@@ -828,6 +941,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
       _latitudeController.text = _formatCoordinate(selection.latitude);
       _longitudeController.text = _formatCoordinate(selection.longitude);
       _selectedPlaceAddress = selection.address;
+      _locationSource = 'search';
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -865,6 +979,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
       _longitudeController.text =
           _formatCoordinate(confirmed.point.longitude);
       _radiusMeters = confirmed.radiusMeters;
+      _locationSource = 'adjustedOnMap';
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -899,6 +1014,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
       setState(() {
         _latitudeController.text = _formatCoordinate(coordinate.latitude);
         _longitudeController.text = _formatCoordinate(coordinate.longitude);
+        _locationSource = 'currentLocation';
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -988,6 +1104,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
       locationAlertsEnabled: _locationAlertsEnabled,
       latitude: latitude,
       longitude: longitude,
+      locationSource: _locationSource.isEmpty ? 'manual' : _locationSource,
     );
 
     Navigator.of(context).pop(
@@ -1238,6 +1355,23 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                       color: AppTheme.mutedText,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Source: ${_sourceBadgeLabel(_locationSource)}',
+                    style: const TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Confidence: ${_confidenceHint()}',
+                    style: const TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 12,
                     ),
                   ),
                   const SizedBox(height: 6),
