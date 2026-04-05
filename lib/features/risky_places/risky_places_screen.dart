@@ -516,6 +516,58 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
     );
   }
 
+  RiskyPlace? _highlightedPlace() {
+    if (_places.isEmpty) {
+      return null;
+    }
+
+    final items = [..._places];
+    items.sort((a, b) {
+      final rankCompare = _sortRank(a).compareTo(_sortRank(b));
+      if (rankCompare != 0) {
+        return rankCompare;
+      }
+      return a.label.toLowerCase().compareTo(b.label.toLowerCase());
+    });
+
+    for (final place in items) {
+      if (place.isTopRisk && _primarySetupState(place) != 'Ready') {
+        return place;
+      }
+    }
+
+    for (final place in items) {
+      if (_primarySetupState(place) != 'Ready') {
+        return place;
+      }
+    }
+
+    return null;
+  }
+
+  String _highlightedPlaceReason(RiskyPlace place) {
+    if (place.isTopRisk) {
+      return 'This one matters most because it is marked top risk.';
+    }
+
+    return 'This is the next place most likely to move your setup forward.';
+  }
+
+  String _highlightedPlaceCtaLabel(RiskyPlace place) {
+    switch (_primarySetupState(place)) {
+      case 'Location needed':
+        return 'Add location';
+      case 'Live alerts off':
+        return 'Turn on live alerts';
+      case 'Almost ready':
+        return 'Finish setup';
+      case 'Premium needed':
+        return 'Open place';
+      default:
+        return 'Open place';
+    }
+  }
+
   bool _hasEnabledPlaces() {
     return _places.any((place) => place.locationAlertsEnabled);
   }
@@ -744,6 +796,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
   @override
   Widget build(BuildContext context) {
     final displayPlaces = _filteredPlaces;
+    final highlightedPlace = _highlightedPlace();
 
     return Scaffold(
       appBar: AppBar(
@@ -940,6 +993,71 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
               ],
             ),
           ),
+          if (highlightedPlace != null) ...[
+            const SizedBox(height: 12),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Next best step',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Finish this place next',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          highlightedPlace.label,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      if (highlightedPlace.isTopRisk)
+                        _buildSignalChip('Top risk', accent: true),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _primarySetupState(highlightedPlace),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _highlightedPlaceReason(highlightedPlace),
+                    style: const TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  AppButton(
+                    label: _highlightedPlaceCtaLabel(highlightedPlace),
+                    icon: Icons.arrow_forward_rounded,
+                    onPressed: () => _openEditPlace(context, highlightedPlace),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           AppCard(
             child: Column(
