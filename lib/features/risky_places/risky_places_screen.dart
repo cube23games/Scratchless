@@ -213,6 +213,99 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
     }
   }
 
+  bool _hasEnabledPlaces() {
+    return _places.any((place) => place.locationAlertsEnabled);
+  }
+
+  bool _hasEnabledPlaceWithSavedLocation() {
+    return _places.any(
+      (place) =>
+          place.locationAlertsEnabled &&
+          place.latitude != null &&
+          place.longitude != null,
+    );
+  }
+
+  bool _backgroundReady() {
+    return widget.premiumState.livePlaceAlertAccess == 'fullBackground';
+  }
+
+  String _setupHeadline() {
+    if (!widget.premiumState.isPremium) {
+      return 'Start Premium to unlock live alerts';
+    }
+    if (_debugState.isArmed && _debugState.eligiblePlaceCount > 0) {
+      return 'Live alerts are ready';
+    }
+    if (widget.premiumState.livePlaceAlertAccess == 'foregroundOnly') {
+      return 'One more step and live alerts will be ready';
+    }
+    return 'Set up live alerts in 3 steps';
+  }
+
+  String _setupBody() {
+    if (!widget.premiumState.isPremium) {
+      return 'Premium unlocks live alerts for your saved risky places.';
+    }
+    if (_debugState.isArmed && _debugState.eligiblePlaceCount > 0) {
+      return 'ScratchLess can now watch for your saved risky places and warn you before a stop turns automatic.';
+    }
+    return 'Live alerts work best when you finish the three setup steps below.';
+  }
+
+  Widget _setupStepRow({
+    required String title,
+    required String detail,
+    required bool done,
+    required bool active,
+  }) {
+    final IconData icon = done
+        ? Icons.check_circle_rounded
+        : active
+            ? Icons.radio_button_checked_rounded
+            : Icons.circle_outlined;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(
+              icon,
+              size: 18,
+              color: done || active ? AppTheme.accent : AppTheme.mutedText,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  detail,
+                  style: const TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _eventTimeLabel(DateTime time) {
     final hour = time.hour.toString().padLeft(2, '0');
     final minute = time.minute.toString().padLeft(2, '0');
@@ -336,6 +429,87 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          AppCard(
+            child: Builder(
+              builder: (context) {
+                final step1Done = _hasEnabledPlaces();
+                final step2Done = _hasEnabledPlaceWithSavedLocation();
+                final step3Done = _backgroundReady();
+
+                final step1Active = !step1Done;
+                final step2Active = step1Done && !step2Done;
+                final step3Active = step1Done && step2Done && !step3Done;
+
+                final step1Detail = step1Done
+                    ? 'At least one saved place is selected for live alerts.'
+                    : (_places.isEmpty
+                        ? 'Add a risky place to begin.'
+                        : 'Turn on live alerts for one saved place.');
+
+                final step2Detail = step2Done
+                    ? 'A saved place location is ready.'
+                    : 'Use current location at the stop or enter coordinates manually.';
+
+                final step3Detail = !widget.premiumState.isPremium
+                    ? 'Premium unlocks the final Android permission step.'
+                    : step3Done
+                        ? 'Android background permission is ready.'
+                        : widget.premiumState.livePlaceAlertAccess == 'foregroundOnly'
+                            ? 'Finish the Android settings step to arm live alerts.'
+                            : 'This step comes after you save a place and its location.';
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Live alert setup',
+                      style: TextStyle(
+                        color: AppTheme.mutedText,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _setupHeadline(),
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _setupBody(),
+                      style: const TextStyle(
+                        color: AppTheme.mutedText,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _setupStepRow(
+                      title: 'Choose a risky place',
+                      detail: step1Detail,
+                      done: step1Done,
+                      active: step1Active,
+                    ),
+                    _setupStepRow(
+                      title: 'Save its location',
+                      detail: step2Detail,
+                      done: step2Done,
+                      active: step2Active,
+                    ),
+                    _setupStepRow(
+                      title: 'Finish Android live alerts',
+                      detail: step3Detail,
+                      done: step3Done,
+                      active: step3Active,
+                    ),
+                  ],
+                );
+              },
             ),
           ),
           const SizedBox(height: 12),
