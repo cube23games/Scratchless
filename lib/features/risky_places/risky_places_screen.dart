@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../app/app_theme.dart';
 import '../../core/models/premium_state.dart';
@@ -7,6 +8,8 @@ import '../../core/services/distance_formatter_service.dart';
 import '../../core/services/live_place_alert_service.dart';
 import '../../core/services/place_search_service.dart';
 import 'place_search_screen.dart';
+import 'place_pin_confirm_screen.dart';
+import 'widgets/place_map_preview.dart';
 import '../../core/services/risky_time_service.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
@@ -797,6 +800,17 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
     return double.tryParse(normalized);
   }
 
+  LatLng? _currentDraftLatLng() {
+    final latitude = _parseCoordinate(_latitudeController.text);
+    final longitude = _parseCoordinate(_longitudeController.text);
+
+    if (latitude == null || longitude == null) {
+      return null;
+    }
+
+    return LatLng(latitude, longitude);
+  }
+
   Future<void> _searchForPlace() async {
     final selection = await Navigator.of(context).push<PlaceSearchSelection>(
       MaterialPageRoute<PlaceSearchSelection>(
@@ -819,6 +833,38 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Place selected and coordinates filled.'),
+      ),
+    );
+  }
+
+  Future<void> _confirmOnMap() async {
+    final draftPoint = _currentDraftLatLng();
+    if (draftPoint == null) {
+      return;
+    }
+
+    final confirmed = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute<LatLng>(
+        builder: (_) => PlacePinConfirmScreen(
+          initialPoint: draftPoint,
+          placeLabel: _labelController.text.trim(),
+        ),
+        fullscreenDialog: true,
+      ),
+    );
+
+    if (confirmed == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _latitudeController.text = _formatCoordinate(confirmed.latitude);
+      _longitudeController.text = _formatCoordinate(confirmed.longitude);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Map location updated.'),
       ),
     );
   }
@@ -985,6 +1031,8 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final previewPoint = _currentDraftLatLng();
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit risky place' : 'Add risky place'),
@@ -1159,6 +1207,32 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+                if (previewPoint != null) ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Map preview',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 180,
+                    child: PlaceMapPreview(
+                      latitude: previewPoint.latitude,
+                      longitude: previewPoint.longitude,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  AppButton(
+                    label: 'Confirm on map',
+                    icon: Icons.place_rounded,
+                    isPrimary: false,
+                    onPressed: _confirmOnMap,
+                  ),
+                ],
                 if (_isEditing &&
                     widget.initialPlace?.latitude != null &&
                     widget.initialPlace?.longitude != null) ...[
