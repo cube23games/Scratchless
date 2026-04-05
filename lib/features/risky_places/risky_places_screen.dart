@@ -265,6 +265,62 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
     }
   }
 
+  String _primarySetupState(RiskyPlace place) {
+    return _friendlyPlaceState(_placeDebugStatus(place.id));
+  }
+
+  String _secondarySetupExplanation(RiskyPlace place) {
+    return _friendlyPlaceDetail(_placeDebugStatus(place.id));
+  }
+
+  String _editCue(RiskyPlace place) {
+    return _primarySetupState(place) == 'Ready'
+        ? 'Tap to edit'
+        : 'Tap to finish setup';
+  }
+
+  String _confidenceBadgeLabel(RiskyPlace place) {
+    final hasCoordinates = place.latitude != null && place.longitude != null;
+    if (!hasCoordinates) {
+      return 'Confidence: Low';
+    }
+
+    switch (place.locationSource) {
+      case 'adjustedOnMap':
+        return 'Confidence: High';
+      case 'search':
+      case 'currentLocation':
+        return 'Confidence: Medium';
+      default:
+        return 'Confidence: Review';
+    }
+  }
+
+  Widget _buildSignalChip(String label, {bool accent = false}) {
+    final Color borderColor =
+        accent ? AppTheme.accent : AppTheme.mutedText.withOpacity(0.18);
+    final Color fillColor = accent
+        ? AppTheme.accent.withOpacity(0.12)
+        : AppTheme.mutedText.withOpacity(0.08);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: fillColor,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: borderColor),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: accent ? AppTheme.accent : AppTheme.mutedText,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
   bool _hasEnabledPlaces() {
     return _places.any((place) => place.locationAlertsEnabled);
   }
@@ -693,12 +749,21 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        place.label,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              place.label,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          if (place.isTopRisk)
+                            _buildSignalChip('Top risk', accent: true),
+                        ],
                       ),
                       if (place.note.trim().isNotEmpty) ...[
                         const SizedBox(height: 8),
@@ -710,67 +775,46 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                           ),
                         ),
                       ],
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       Text(
-                        'Future alert radius: ${DistanceFormatterService.usPlaceRadiusLabel(place.radiusMeters)}',
+                        _primarySetupState(place),
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _secondarySetupExplanation(place),
                         style: const TextStyle(
                           color: AppTheme.mutedText,
                           fontSize: 13,
-                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        place.latitude != null && place.longitude != null
-                            ? (place.locationAlertsEnabled
-                                ? 'This place is set up for live alerts'
-                                : 'Coordinates saved for future live alerts')
-                            : (place.locationAlertsEnabled
-                                ? 'Live place alerts need a saved location'
-                                : 'Location not set yet'),
-                        style: const TextStyle(
-                          color: AppTheme.mutedText,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _buildSignalChip(
+                            'Radius: ${DistanceFormatterService.usPlaceRadiusLabel(place.radiusMeters)}',
+                          ),
+                          _buildSignalChip(
+                            'Source: ${_sourceBadgeLabel(place.locationSource)}',
+                          ),
+                          _buildSignalChip(
+                            _confidenceBadgeLabel(place),
+                          ),
+                          _buildSignalChip(
+                            place.locationAlertsEnabled
+                                ? 'Live alerts on'
+                                : 'Live alerts off',
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 10),
                       Text(
-                        'Setup state: ${_friendlyPlaceState(_placeDebugStatus(place.id))}',
-                        style: const TextStyle(
-                          color: AppTheme.mutedText,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _friendlyPlaceDetail(_placeDebugStatus(place.id)),
-                        style: const TextStyle(
-                          color: AppTheme.mutedText,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Source: ${_sourceBadgeLabel(place.locationSource)}',
-                        style: const TextStyle(
-                          color: AppTheme.mutedText,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Confidence: ${_confidenceHint(source: place.locationSource, radiusMeters: place.radiusMeters, hasCoordinates: place.latitude != null && place.longitude != null)}',
-                        style: const TextStyle(
-                          color: AppTheme.mutedText,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        place.isTopRisk ? 'Top risk place' : 'Tap to edit',
+                        _editCue(place),
                         style: const TextStyle(
                           color: AppTheme.mutedText,
                           fontSize: 12,
