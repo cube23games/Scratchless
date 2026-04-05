@@ -932,7 +932,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                         fontSize: 14,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     _setupStepRow(
                       title: 'Choose a risky place',
                       detail: step1Detail,
@@ -997,7 +997,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                   ),
                 ],
                 if (_primaryActionLabel() != null) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   AppButton(
                     label: _primaryActionLabel()!,
                     icon: Icons.arrow_forward_rounded,
@@ -1022,7 +1022,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 AppButton(
                   label: 'Refresh live alert status',
                   icon: Icons.sync_rounded,
@@ -1054,7 +1054,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1104,7 +1104,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1137,7 +1137,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                       fontSize: 13,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   AppButton(
                     label: _highlightedPlaceCtaLabel(highlightedPlace),
                     icon: Icons.arrow_forward_rounded,
@@ -1199,10 +1199,10 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       _buildSummaryMetric('Saved', _savedPlaceCount()),
                       _buildSummaryMetric('Ready', _readyPlaceCount()),
@@ -1235,10 +1235,10 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       _buildFilterChip('All', 'all'),
                       _buildFilterChip('Needs setup', 'needsSetup'),
@@ -1295,7 +1295,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   AppButton(
                     label: 'Add your first risky place',
                     icon: Icons.add_location_alt_rounded,
@@ -1377,7 +1377,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                           ),
                         ),
                       ],
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       Text(
                         _primarySetupState(place),
                         style: TextStyle(
@@ -1394,10 +1394,10 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                           fontSize: 13,
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+                        spacing: 6,
+                        runSpacing: 6,
                         children: [
                           _buildSignalChip(
                             'Radius: ${DistanceFormatterService.usPlaceRadiusLabel(place.radiusMeters)}',
@@ -1415,7 +1415,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       Text(
                         _editCue(place),
                         style: const TextStyle(
