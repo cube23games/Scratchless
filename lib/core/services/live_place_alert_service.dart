@@ -431,6 +431,7 @@ class LivePlaceAlertService {
       blockedPlaceCount: blockedPlaceCount,
       topBlocker: _topBlocker(),
       lastEventMessage: _recentEvents.isEmpty ? null : _recentEvents.first.message,
+      lastEventAt: _recentEvents.isEmpty ? null : _recentEvents.first.createdAt,
       recentEvents: List<LiveAlertDebugEvent>.from(_recentEvents),
       placeItems: placeItems,
     );
