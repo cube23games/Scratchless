@@ -210,7 +210,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                 Text(
                   _debugState.isArmed
                       ? 'Live alerts armed'
-                      : 'Live alerts not armed',
+                      : 'Live alerts are not ready yet',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
@@ -348,7 +348,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                       Text(
                         place.latitude != null && place.longitude != null
                             ? (place.locationAlertsEnabled
-                                ? 'Ready for live place alerts'
+                                ? 'This place is set up for live alerts'
                                 : 'Coordinates saved for future live alerts')
                             : (place.locationAlertsEnabled
                                 ? 'Live place alerts need a saved location'
@@ -361,7 +361,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Live alert status: ${_placeDebugStatus(place.id)}',
+                        'Live alert setup: ${_placeDebugStatus(place.id)}',
                         style: const TextStyle(
                           color: AppTheme.mutedText,
                           fontSize: 12,

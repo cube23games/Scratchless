@@ -205,7 +205,7 @@ class LivePlaceAlertService {
     await tl.Tracelet.removeGeofences();
 
     if (places.isEmpty) {
-      _logEvent('Monitoring synced: no places armed');
+      _logEvent('No places are armed yet');
       return;
     }
 
@@ -223,7 +223,7 @@ class LivePlaceAlertService {
     }
 
     await tl.Tracelet.startGeofences();
-    _logEvent('Monitoring synced: ${places.length} place(s) armed');
+    _logEvent('${places.length} place(s) ready for live alerts');
   }
 
   Future<void> refreshMonitoring() async {
@@ -352,7 +352,7 @@ class LivePlaceAlertService {
         placeId: place.id,
         label: place.label,
         armed: false,
-        status: 'Blocked: live alerts disabled',
+        status: 'Turn on live alerts for this place',
       );
     }
 
@@ -361,7 +361,7 @@ class LivePlaceAlertService {
         placeId: place.id,
         label: place.label,
         armed: false,
-        status: 'Blocked: coordinates missing',
+        status: 'Save this place’s location first',
       );
     }
 
@@ -370,7 +370,7 @@ class LivePlaceAlertService {
         placeId: place.id,
         label: place.label,
         armed: false,
-        status: 'Blocked: premium inactive',
+        status: 'Start Premium to arm this place',
       );
     }
 
@@ -379,7 +379,7 @@ class LivePlaceAlertService {
         placeId: place.id,
         label: place.label,
         armed: false,
-        status: 'Blocked: background permission incomplete',
+        status: 'Needs one more Android permission step',
       );
     }
 
@@ -411,7 +411,7 @@ class LivePlaceAlertService {
         _latestAllRiskyPlaces.any((place) => place.locationAlertsEnabled);
 
     if (!hasEnabledPlaces) {
-      return 'No places enabled';
+      return 'Turn on live alerts for a saved place';
     }
 
     final hasEnabledMissingCoordinates = _latestAllRiskyPlaces.any(
@@ -421,11 +421,11 @@ class LivePlaceAlertService {
     );
 
     if (_latestPremiumState.livePlaceAlertAccess != 'fullBackground') {
-      return 'Need background permission';
+      return 'Finish live alerts in Android settings';
     }
 
     if (hasEnabledMissingCoordinates) {
-      return 'Need saved coordinates';
+      return 'Save a location for at least one place';
     }
 
     if (_monitoredPlacesById.isEmpty) {
