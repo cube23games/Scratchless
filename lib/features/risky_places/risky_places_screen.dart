@@ -1206,30 +1206,12 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          TextField(
-            controller: _labelController,
-            decoration: const InputDecoration(
-              labelText: 'Place name',
-              hintText: 'Gas station by work or store near home',
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _noteController,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: 'Optional note',
-              hintText:
-                  'Usually risky after payday, after work, or when I feel stressed.',
-            ),
-          ),
-          const SizedBox(height: 12),
           AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Future smart place-alert radius',
+                  'Place details',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 13,
@@ -1238,54 +1220,40 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Store this radius internally now. ScratchLess will show it in feet or miles and use it later for premium live place alerts.',
+                  'Name the stop you want to keep visible.',
                   style: TextStyle(
-                    color: AppTheme.mutedText,
-                    fontSize: 14,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: _radiusPresets.map((preset) {
-                    return ChoiceChip(
-                      label: Text(
-                        '${preset.label} • ${DistanceFormatterService.usPlaceRadiusLabel(preset.meters)}',
-                      ),
-                      selected: _radiusMeters == preset.meters,
-                      onSelected: (_) {
-                        setState(() {
-                          _radiusMeters = preset.meters;
-                        });
-                      },
-                    );
-                  }).toList(),
+                TextField(
+                  controller: _labelController,
+                  decoration: const InputDecoration(
+                    labelText: 'Place name',
+                    hintText: 'Gas station by work or store near home',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _noteController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Optional note',
+                    hintText:
+                        'Usually risky after payday, after work, or when I feel stressed.',
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 12),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Future live place alerts'),
-            subtitle: const Text(
-              'Premium architecture only for now. This prepares this stop for future live place alerts later.',
-            ),
-            value: _locationAlertsEnabled,
-            onChanged: (value) {
-              setState(() {
-                _locationAlertsEnabled = value;
-              });
-            },
-          ),
-          const SizedBox(height: 12),
           AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Live place location',
+                  'Choose a location',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 13,
@@ -1293,12 +1261,9 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  widget.initialPlace?.latitude != null &&
-                          widget.initialPlace?.longitude != null
-                      ? 'Coordinates are already saved for this place. It is ready for live geofence alerts once the next hookup step is active.'
-                      : 'Add coordinates manually for now so this place can be used in the first live geofence pass.',
-                  style: const TextStyle(
+                const Text(
+                  'Search, capture your current spot, or enter coordinates manually.',
+                  style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 14,
                   ),
@@ -1357,16 +1322,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Search for a place, use your current location at the risky stop, or enter coordinates manually if you already know them.',
-                  style: TextStyle(
-                    color: AppTheme.mutedText,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Leave blank for now if you do not know the exact coordinates yet.',
+                  'Manual coordinates are the fallback when search or current location are not enough.',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 12,
@@ -1374,9 +1330,32 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                   ),
                 ),
                 if (previewPoint != null) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _latitudeController.clear();
+                          _longitudeController.clear();
+                          _locationSource = 'manual';
+                        });
+                      },
+                      child: const Text('Clear saved location'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (previewPoint != null) ...[
+            const SizedBox(height: 12),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   const Text(
-                    'Map preview',
+                    'Confirm on map',
                     style: TextStyle(
                       color: AppTheme.mutedText,
                       fontSize: 13,
@@ -1384,6 +1363,14 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
+                  const Text(
+                    'Check that the pin and alert area look right before saving.',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   SizedBox(
                     height: 180,
                     child: PlaceMapPreview(
@@ -1393,15 +1380,6 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Text(
-                    'Alert radius: ${DistanceFormatterService.usPlaceRadiusLabel(_radiusMeters)}',
-                    style: const TextStyle(
-                      color: AppTheme.mutedText,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
                   Text(
                     'Source: ${_sourceBadgeLabel(_locationSource)}',
                     style: const TextStyle(
@@ -1419,8 +1397,17 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                     ),
                   ),
                   const SizedBox(height: 6),
+                  Text(
+                    'Alert radius: ${DistanceFormatterService.usPlaceRadiusLabel(_radiusMeters)}',
+                    style: const TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
                   const Text(
-                    'Check the pin if this stop is large or close to other stores.',
+                    'Tap confirm if this stop is large or close to other stores.',
                     style: TextStyle(
                       color: AppTheme.mutedText,
                       fontSize: 12,
@@ -1434,39 +1421,93 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                     onPressed: _confirmOnMap,
                   ),
                 ],
-                if (_isEditing &&
-                    widget.initialPlace?.latitude != null &&
-                    widget.initialPlace?.longitude != null) ...[
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      onPressed: () {
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Alert size',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Choose how tight or wide the live alert area should be.',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: _radiusPresets.map((preset) {
+                    return ChoiceChip(
+                      label: Text(
+                        '${preset.label} • ${DistanceFormatterService.usPlaceRadiusLabel(preset.meters)}',
+                      ),
+                      selected: _radiusMeters == preset.meters,
+                      onSelected: (_) {
                         setState(() {
-                          _latitudeController.clear();
-                          _longitudeController.clear();
+                          _radiusMeters = preset.meters;
                         });
                       },
-                      child: const Text('Clear saved location'),
-                    ),
-                  ),
-                ],
+                    );
+                  }).toList(),
+                ),
               ],
             ),
           ),
           const SizedBox(height: 12),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Mark as top risk'),
-            subtitle: const Text(
-              'Top-risk places stay surfaced first and use stronger live-alert wording later.',
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Options',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Live place alerts'),
+                  subtitle: const Text(
+                    'Use this stop in the live alert setup when Premium and Android permissions are ready.',
+                  ),
+                  value: _locationAlertsEnabled,
+                  onChanged: (value) {
+                    setState(() {
+                      _locationAlertsEnabled = value;
+                    });
+                  },
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Mark as top risk'),
+                  subtitle: const Text(
+                    'Keep this place surfaced first and use stronger alert wording later.',
+                  ),
+                  value: _isTopRisk,
+                  onChanged: (value) {
+                    setState(() {
+                      _isTopRisk = value;
+                    });
+                  },
+                ),
+              ],
             ),
-            value: _isTopRisk,
-            onChanged: (value) {
-              setState(() {
-                _isTopRisk = value;
-              });
-            },
           ),
           const SizedBox(height: 16),
           AppButton(
