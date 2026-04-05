@@ -568,6 +568,44 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
     }
   }
 
+  RiskyPlace? _firstReadyPlace() {
+    final readyPlaces = _places
+        .where((place) => _primarySetupState(place) == 'Ready')
+        .toList();
+
+    if (readyPlaces.isEmpty) {
+      return null;
+    }
+
+    readyPlaces.sort((a, b) {
+      final rankCompare = _sortRank(a).compareTo(_sortRank(b));
+      if (rankCompare != 0) {
+        return rankCompare;
+      }
+      return a.label.toLowerCase().compareTo(b.label.toLowerCase());
+    });
+
+    return readyPlaces.first;
+  }
+
+  String _readySpotlightHeadline() {
+    return _readyPlaceCount() == 1
+        ? 'Your first place is ready'
+        : 'Places ready to help';
+  }
+
+  String _readySpotlightBody() {
+    return _readyPlaceCount() == 1
+        ? 'ScratchLess can now watch this stop and nudge you before it turns automatic.'
+        : 'ScratchLess can now watch your ready places and help interrupt automatic stops.';
+  }
+
+  String _readySpotlightCountLabel() {
+    return _readyPlaceCount() == 1
+        ? '1 place ready'
+        : '${_readyPlaceCount()} places ready';
+  }
+
   bool _hasEnabledPlaces() {
     return _places.any((place) => place.locationAlertsEnabled);
   }
@@ -796,6 +834,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
   @override
   Widget build(BuildContext context) {
     final displayPlaces = _filteredPlaces;
+    final readySpotlightPlace = _firstReadyPlace();
     final highlightedPlace = _highlightedPlace();
 
     return Scaffold(
@@ -993,6 +1032,56 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
               ],
             ),
           ),
+          if (readySpotlightPlace != null) ...[
+            const SizedBox(height: 12),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Ready now',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _readySpotlightHeadline(),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          readySpotlightPlace.label,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      _buildSignalChip(_readySpotlightCountLabel(), accent: true),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _readySpotlightBody(),
+                    style: const TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (highlightedPlace != null) ...[
             const SizedBox(height: 12),
             AppCard(
