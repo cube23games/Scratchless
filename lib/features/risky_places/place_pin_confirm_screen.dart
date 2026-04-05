@@ -7,6 +7,16 @@ import '../../core/services/distance_formatter_service.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 
+class PlacePinConfirmResult {
+  final LatLng point;
+  final int radiusMeters;
+
+  const PlacePinConfirmResult({
+    required this.point,
+    required this.radiusMeters,
+  });
+}
+
 class PlacePinConfirmScreen extends StatefulWidget {
   final LatLng initialPoint;
   final String placeLabel;
@@ -24,24 +34,32 @@ class PlacePinConfirmScreen extends StatefulWidget {
 }
 
 class _PlacePinConfirmScreenState extends State<PlacePinConfirmScreen> {
+  static const List<_RadiusPreset> _radiusPresets = <_RadiusPreset>[
+    _RadiusPreset(label: 'Small', meters: 150),
+    _RadiusPreset(label: 'Medium', meters: 300),
+    _RadiusPreset(label: 'Large', meters: 500),
+  ];
+
   late LatLng _selectedPoint;
+  late int _radiusMeters;
 
   @override
   void initState() {
     super.initState();
     _selectedPoint = widget.initialPoint;
+    _radiusMeters = widget.radiusMeters;
   }
 
   String _coordLabel(double value) => value.toStringAsFixed(6);
 
   String _confidenceHint() {
-    if (widget.radiusMeters <= 150) {
+    if (_radiusMeters <= 150) {
       return 'This is a tighter alert area. Check the pin if nearby stores are close together.';
     }
-    if (widget.radiusMeters <= 300) {
+    if (_radiusMeters <= 300) {
       return 'Exact enough for most live alerts. Check the pin if the stop is large or close to other stores.';
     }
-    return 'This is a wider alert area. Fine-tune the pin if you want a tighter live alert zone.';
+    return 'This is a wider alert area. Tighten it if you want a smaller live alert zone.';
   }
 
   @override
@@ -80,11 +98,45 @@ class _PlacePinConfirmScreenState extends State<PlacePinConfirmScreen> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Tap the map to move the center point. The circle shows the live alert area.',
+                        'Tap the map to move the center point. Use the size buttons to tighten or widen the alert area.',
                         style: TextStyle(
                           color: AppTheme.mutedText,
                           fontSize: 14,
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Alert size',
+                        style: TextStyle(
+                          color: AppTheme.mutedText,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: _radiusPresets.map((preset) {
+                          return ChoiceChip(
+                            label: Text(
+                              '${preset.label} • ${DistanceFormatterService.usPlaceRadiusLabel(preset.meters)}',
+                            ),
+                            selected: _radiusMeters == preset.meters,
+                            onSelected: (_) {
+                              setState(() {
+                                _radiusMeters = preset.meters;
+                              });
+                            },
+                          );
+                        }).toList(),
                       ),
                     ],
                   ),
@@ -114,11 +166,14 @@ class _PlacePinConfirmScreenState extends State<PlacePinConfirmScreen> {
                           circles: [
                             CircleMarker(
                               point: _selectedPoint,
-                              radius: widget.radiusMeters.toDouble(),
+                              radius: _radiusMeters.toDouble(),
                               useRadiusInMeter: true,
-                              color:
-                                  Theme.of(context).colorScheme.primary.withOpacity(0.16),
-                              borderColor: Theme.of(context).colorScheme.primary,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.16),
+                              borderColor:
+                                  Theme.of(context).colorScheme.primary,
                               borderStrokeWidth: 2,
                             ),
                           ],
@@ -164,7 +219,7 @@ class _PlacePinConfirmScreenState extends State<PlacePinConfirmScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Alert radius: ${DistanceFormatterService.usPlaceRadiusLabel(widget.radiusMeters)}',
+                        'Alert radius: ${DistanceFormatterService.usPlaceRadiusLabel(_radiusMeters)}',
                         style: const TextStyle(
                           color: AppTheme.mutedText,
                           fontSize: 14,
@@ -194,7 +249,12 @@ class _PlacePinConfirmScreenState extends State<PlacePinConfirmScreen> {
                   label: 'Use this location',
                   icon: Icons.check_rounded,
                   onPressed: () {
-                    Navigator.of(context).pop(_selectedPoint);
+                    Navigator.of(context).pop(
+                      PlacePinConfirmResult(
+                        point: _selectedPoint,
+                        radiusMeters: _radiusMeters,
+                      ),
+                    );
                   },
                 ),
                 const SizedBox(height: 8),
@@ -212,4 +272,14 @@ class _PlacePinConfirmScreenState extends State<PlacePinConfirmScreen> {
       ),
     );
   }
+}
+
+class _RadiusPreset {
+  final String label;
+  final int meters;
+
+  const _RadiusPreset({
+    required this.label,
+    required this.meters,
+  });
 }

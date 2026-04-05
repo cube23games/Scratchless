@@ -843,8 +843,9 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
       return;
     }
 
-    final confirmed = await Navigator.of(context).push<LatLng>(
-      MaterialPageRoute<LatLng>(
+    final confirmed =
+        await Navigator.of(context).push<PlacePinConfirmResult>(
+      MaterialPageRoute<PlacePinConfirmResult>(
         builder: (_) => PlacePinConfirmScreen(
           initialPoint: draftPoint,
           placeLabel: _labelController.text.trim(),
@@ -859,13 +860,16 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
     }
 
     setState(() {
-      _latitudeController.text = _formatCoordinate(confirmed.latitude);
-      _longitudeController.text = _formatCoordinate(confirmed.longitude);
+      _latitudeController.text =
+          _formatCoordinate(confirmed.point.latitude);
+      _longitudeController.text =
+          _formatCoordinate(confirmed.point.longitude);
+      _radiusMeters = confirmed.radiusMeters;
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Map location updated.'),
+        content: Text('Map location and alert radius updated.'),
       ),
     );
   }
