@@ -206,6 +206,9 @@ class _HomeShellState extends State<HomeShell> {
           places: widget.riskyPlaces,
           premiumState: widget.premiumState,
           riskyTimeInsight: widget.riskyTimeInsight,
+          onStartPremiumTrial: widget.onStartPremiumTrial,
+          onEnableLivePlaceAlertsBackground:
+              widget.onEnableLivePlaceAlertsBackground,
           onAddPlace: widget.onAddRiskyPlace,
           onEditPlace: widget.onEditRiskyPlace,
           onDeletePlace: widget.onDeleteRiskyPlace,

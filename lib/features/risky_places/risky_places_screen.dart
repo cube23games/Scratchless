@@ -13,6 +13,8 @@ class RiskyPlacesScreen extends StatefulWidget {
   final List<RiskyPlace> places;
   final PremiumState premiumState;
   final RiskyTimeInsight riskyTimeInsight;
+  final VoidCallback onStartPremiumTrial;
+  final Future<String> Function() onEnableLivePlaceAlertsBackground;
   final ValueChanged<RiskyPlace> onAddPlace;
   final ValueChanged<RiskyPlace> onEditPlace;
   final void Function(String id) onDeletePlace;
@@ -22,6 +24,8 @@ class RiskyPlacesScreen extends StatefulWidget {
     required this.places,
     required this.premiumState,
     required this.riskyTimeInsight,
+    required this.onStartPremiumTrial,
+    required this.onEnableLivePlaceAlertsBackground,
     required this.onAddPlace,
     required this.onEditPlace,
     required this.onDeletePlace,
@@ -104,6 +108,75 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
 
   String _statusDiagnosticsLine() {
     return 'Permission: ${_debugState.permissionLabel} • Armed: ${_debugState.eligiblePlaceCount} • Blocked: ${_debugState.blockedPlaceCount}';
+  }
+
+  String? _primaryActionLabel() {
+    final blocker = _debugState.topBlocker;
+
+    if (blocker == 'Need Premium') {
+      return 'Start Premium';
+    }
+    if (blocker == 'Finish live alerts in Android settings') {
+      return 'Finish live alerts';
+    }
+    if (blocker == 'Save a location for at least one place') {
+      return 'Add place location';
+    }
+    if (blocker == 'Turn on live alerts for a saved place') {
+      return 'Choose a place';
+    }
+    if (_debugState.isArmed && _debugState.eligiblePlaceCount > 0) {
+      return 'Refresh status';
+    }
+
+    return null;
+  }
+
+  Future<void> _runPrimaryAction() async {
+    final blocker = _debugState.topBlocker;
+
+    if (blocker == 'Need Premium') {
+      widget.onStartPremiumTrial();
+      await _refreshLiveAlertDebugState();
+      return;
+    }
+
+    if (blocker == 'Finish live alerts in Android settings') {
+      await widget.onEnableLivePlaceAlertsBackground();
+      await _refreshLiveAlertDebugState();
+      return;
+    }
+
+    if (blocker == 'Save a location for at least one place') {
+      final placeNeedingLocation = _places.cast<RiskyPlace?>().firstWhere(
+        (place) =>
+            place != null &&
+            place.locationAlertsEnabled &&
+            (place.latitude == null || place.longitude == null),
+        orElse: () => null,
+      );
+      if (placeNeedingLocation != null && mounted) {
+        await _openEditPlace(context, placeNeedingLocation);
+      }
+      return;
+    }
+
+    if (blocker == 'Turn on live alerts for a saved place') {
+      final placeWithAlertsOff = _places.cast<RiskyPlace?>().firstWhere(
+        (place) => place != null && !place.locationAlertsEnabled,
+        orElse: () => null,
+      );
+      if (placeWithAlertsOff != null && mounted) {
+        await _openEditPlace(context, placeWithAlertsOff);
+        return;
+      }
+      if (mounted) {
+        await _openAddPlace(context);
+      }
+      return;
+    }
+
+    await _refreshLiveAlertDebugState();
   }
 
   String _friendlyPlaceState(String rawStatus) {
@@ -294,6 +367,14 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+                if (_primaryActionLabel() != null) ...[
+                  const SizedBox(height: 12),
+                  AppButton(
+                    label: _primaryActionLabel()!,
+                    icon: Icons.arrow_forward_rounded,
+                    onPressed: _runPrimaryAction,
+                  ),
+                ],
                 const SizedBox(height: 8),
                 Text(
                   _statusDiagnosticsLine(),
