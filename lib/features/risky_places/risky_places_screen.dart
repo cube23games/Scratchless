@@ -162,6 +162,65 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
     return 'Permission: ${_debugState.permissionLabel} • Armed: ${_debugState.eligiblePlaceCount} • Blocked: ${_debugState.blockedPlaceCount}';
   }
 
+  String? _setupProgressNote() {
+    if (_places.isEmpty) {
+      return null;
+    }
+
+    if (_debugState.eligiblePlaceCount > 0) {
+      return _debugState.eligiblePlaceCount == 1
+          ? '1 place is ready for live alerts.'
+          : '${_debugState.eligiblePlaceCount} places are ready for live alerts.';
+    }
+
+    final placesWithLocation = _places
+        .where((place) => place.latitude != null && place.longitude != null)
+        .length;
+
+    if (placesWithLocation > 0) {
+      return placesWithLocation == 1
+          ? '1 place already has a saved location.'
+          : '$placesWithLocation places already have saved locations.';
+    }
+
+    return _places.length == 1
+        ? '1 place saved — now finish its setup.'
+        : '${_places.length} places saved — finish one setup next.';
+  }
+
+  String _saveSuccessMessage({
+    required int beforePlaceCount,
+    required int beforeReadyCount,
+    required RiskyPlace savedPlace,
+  }) {
+    final afterPlaceCount = _places.length;
+    final afterReadyCount = _debugState.eligiblePlaceCount;
+    final hasLocation =
+        savedPlace.latitude != null && savedPlace.longitude != null;
+
+    if (beforeReadyCount == 0 && afterReadyCount == 1) {
+      return 'Nice work — your first place is ready for live alerts.';
+    }
+
+    if (afterReadyCount > beforeReadyCount) {
+      return afterReadyCount == 1
+          ? 'This place is ready for live alerts.'
+          : '$afterReadyCount places are ready for live alerts.';
+    }
+
+    if (beforePlaceCount == 0 && afterPlaceCount == 1) {
+      return hasLocation
+          ? 'First risky place saved — location included.'
+          : 'First risky place saved — now add its location.';
+    }
+
+    if (hasLocation) {
+      return 'Location saved — this place is getting close.';
+    }
+
+    return 'Place saved — now add its location.';
+  }
+
   String? _primaryActionLabel() {
     final blocker = _debugState.topBlocker;
 
@@ -457,6 +516,9 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
   }
 
   Future<void> _openAddPlace(BuildContext context) async {
+    final beforePlaceCount = _places.length;
+    final beforeReadyCount = _debugState.eligiblePlaceCount;
+
     final result = await Navigator.of(context).push<_EditRiskyPlaceResult>(
       MaterialPageRoute(
         builder: (_) => const _EditRiskyPlaceScreen(),
@@ -479,9 +541,26 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
 
     widget.onAddPlace(place);
     await _refreshLiveAlertDebugState();
+
+    if (mounted) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          content: Text(
+            _saveSuccessMessage(
+              beforePlaceCount: beforePlaceCount,
+              beforeReadyCount: beforeReadyCount,
+              savedPlace: place,
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _openEditPlace(BuildContext context, RiskyPlace place) async {
+    final beforePlaceCount = _places.length;
+    final beforeReadyCount = _debugState.eligiblePlaceCount;
+
     final result = await Navigator.of(context).push<_EditRiskyPlaceResult>(
       MaterialPageRoute(
         builder: (_) => _EditRiskyPlaceScreen(initialPlace: place),
@@ -519,6 +598,20 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
 
       widget.onEditPlace(updatedPlace);
       await _refreshLiveAlertDebugState();
+
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(
+            content: Text(
+              _saveSuccessMessage(
+                beforePlaceCount: beforePlaceCount,
+                beforeReadyCount: beforeReadyCount,
+                savedPlace: updatedPlace,
+              ),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -674,6 +767,17 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+                if (_setupProgressNote() != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _setupProgressNote()!,
+                    style: const TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
                 if (_primaryActionLabel() != null) ...[
                   const SizedBox(height: 12),
                   AppButton(
@@ -1052,7 +1156,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Place selected and coordinates filled.'),
+        content: Text('Place selected — now give it a quick map check.'),
       ),
     );
   }
@@ -1090,7 +1194,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Map location and alert radius updated.'),
+        content: Text('Nice — map location and alert radius updated.'),
       ),
     );
   }
@@ -1126,7 +1230,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Current location saved (${coordinate.accuracy.toStringAsFixed(0)}m accuracy).',
+            'Current location saved — this place is getting close (${coordinate.accuracy.toStringAsFixed(0)}m accuracy).',
           ),
         ),
       );
