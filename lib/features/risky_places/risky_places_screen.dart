@@ -163,6 +163,11 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
 
   String _statusActionLine() {
     final blocker = _debugState.topBlocker;
+
+    if (blocker == 'Finish live alerts in Android settings') {
+      return 'Allow location all the time in Android settings to arm live alerts.';
+    }
+
     if (blocker != null && blocker.isNotEmpty) {
       return blocker;
     }
@@ -224,6 +229,12 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
           : '$afterReadyCount places are ready for live alerts.';
     }
 
+    if (savedPlace.locationAlertsEnabled &&
+        hasLocation &&
+        _debugState.accessLevel != 'fullBackground') {
+      return 'Place saved — one more step: allow location all the time in Android settings.';
+    }
+
     if (beforePlaceCount == 0 && afterPlaceCount == 1) {
       return hasLocation
           ? 'First risky place saved — location included.'
@@ -244,7 +255,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
       return 'Start Premium';
     }
     if (blocker == 'Finish live alerts in Android settings') {
-      return 'Finish live alerts';
+      return 'Open Android location settings';
     }
     if (blocker == 'Save a location for at least one place') {
       return 'Add place location';
@@ -269,8 +280,17 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
     }
 
     if (blocker == 'Finish live alerts in Android settings') {
-      await widget.onEnableLivePlaceAlertsBackground();
-      await _refreshLiveAlertDebugState();
+      await LivePlaceAlertService.instance.openAppSettings();
+
+      if (mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Android settings opened. Allow location all the time, then come back here.',
+            ),
+          ),
+        );
+      }
       return;
     }
 
@@ -328,7 +348,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
       case 'Armed':
         return 'This place is ready for live alerts.';
       case 'Needs one more Android permission step':
-        return 'Finish the Android step to turn live alerts on for this place.';
+        return 'Allow location all the time in Android settings to turn live alerts on for this place.';
       case 'Save this place’s location first':
         return 'Save this place’s location first.';
       case 'Turn on live alerts for this place':
@@ -561,6 +581,10 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
   }
 
   String _highlightedPlaceReason(RiskyPlace place) {
+    if (_primarySetupState(place) == 'Almost ready') {
+      return 'Open Android settings and allow location all the time to arm this place.';
+    }
+
     if (place.isTopRisk) {
       return 'This one matters most because it is marked top risk.';
     }
@@ -575,7 +599,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
       case 'Live alerts off':
         return 'Turn on live alerts';
       case 'Almost ready':
-        return 'Finish setup';
+        return 'Open Android settings';
       case 'Premium needed':
         return 'Open place';
       default:
@@ -917,8 +941,8 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                     : step3Done
                         ? 'Android permission is ready.'
                         : _debugState.accessLevel == 'foregroundOnly'
-                            ? 'Finish the Android settings step to turn live alerts on.'
-                            : 'This step comes after you save a place and its location.';
+                            ? 'Open Android settings and allow location all the time.'
+                            : 'Save a place and its location, then open Android settings and allow location all the time.';
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1156,7 +1180,24 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                   AppButton(
                     label: _highlightedPlaceCtaLabel(highlightedPlace),
                     icon: Icons.arrow_forward_rounded,
-                    onPressed: () => _openEditPlace(context, highlightedPlace),
+                    onPressed: () async {
+                      if (_primarySetupState(highlightedPlace) == 'Almost ready') {
+                        await LivePlaceAlertService.instance.openAppSettings();
+
+                        if (mounted) {
+                          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Android settings opened. Allow location all the time, then come back here.',
+                              ),
+                            ),
+                          );
+                        }
+                        return;
+                      }
+
+                      await _openEditPlace(context, highlightedPlace);
+                    },
                   ),
                 ],
               ),
@@ -2102,7 +2143,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Live place alerts'),
                   subtitle: const Text(
-                    'Use this stop for live alerts when Premium and Android permissions are ready.',
+                    'Use this stop for live alerts when Premium is on. If it still says Almost ready, use the main screen button to open Android location settings.',
                   ),
                   value: _locationAlertsEnabled,
                   onChanged: (value) {
