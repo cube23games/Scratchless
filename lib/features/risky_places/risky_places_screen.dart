@@ -232,7 +232,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
     if (savedPlace.locationAlertsEnabled &&
         hasLocation &&
         _debugState.accessLevel != 'fullBackground') {
-      return 'Place saved — one more step: allow location all the time in Android settings.';
+      return 'Place saved — one more step: open Android settings and allow location all the time.';
     }
 
     if (beforePlaceCount == 0 && afterPlaceCount == 1) {
@@ -242,7 +242,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
     }
 
     if (hasLocation) {
-      return 'Location saved — this place is getting close.';
+      return 'Location saved — this place is getting close. If it still says Almost ready, open Android location settings next.';
     }
 
     return 'Place saved — now add its location.';
@@ -582,7 +582,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
 
   String _highlightedPlaceReason(RiskyPlace place) {
     if (_primarySetupState(place) == 'Almost ready') {
-      return 'Open Android settings and allow location all the time to arm this place.';
+      return 'Open Android settings and allow location all the time to finish this place.';
     }
 
     if (place.isTopRisk) {
@@ -643,6 +643,70 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
     return _readyPlaceCount() == 1
         ? '1 place ready'
         : '${_readyPlaceCount()} places ready';
+  }
+
+  bool _needsBackgroundPermissionWalkthrough() {
+    if (!widget.premiumState.isPremium) {
+      return false;
+    }
+
+    final hasConfiguredPlace = _places.any(
+      (place) =>
+          place.locationAlertsEnabled &&
+          place.latitude != null &&
+          place.longitude != null,
+    );
+
+    return hasConfiguredPlace && _debugState.accessLevel != 'fullBackground';
+  }
+
+  Future<void> _openAndroidLocationSettings() async {
+    await LivePlaceAlertService.instance.openAppSettings();
+
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Android settings opened. Set Location to "Allow all the time", then come back here.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _checkPermissionAgain() async {
+    final beforeAccess = _debugState.accessLevel;
+
+    await _refreshLiveAlertDebugState();
+
+    if (!mounted) {
+      return;
+    }
+
+    final afterAccess = _debugState.accessLevel;
+
+    if (afterAccess == 'fullBackground' && beforeAccess != 'fullBackground') {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Android location access updated — live alerts are now armed.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (afterAccess != 'fullBackground') {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'ScratchLess still needs Location set to "Allow all the time" in Android settings.',
+          ),
+        ),
+      );
+    }
   }
 
   bool _hasEnabledPlaces() {
@@ -941,7 +1005,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                     : step3Done
                         ? 'Android permission is ready.'
                         : _debugState.accessLevel == 'foregroundOnly'
-                            ? 'Open Android settings and allow location all the time.'
+                            ? 'Open Android settings and allow location all the time, then return here.'
                             : 'Save a place and its location, then open Android settings and allow location all the time.';
 
                 return Column(
@@ -1071,6 +1135,93 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
               ],
             ),
           ),
+          if (_needsBackgroundPermissionWalkthrough()) ...[
+            const SizedBox(height: 12),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Finish Android location access',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Allow location all the time',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Live alerts need Android location access set to "Allow all the time" before risky places can arm.',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    '1. Tap Open Android location settings',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '2. Open Permissions',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '3. Open Location',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '4. Choose "Allow all the time"',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '5. Return to ScratchLess and tap check again',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  AppButton(
+                    label: 'Open Android location settings',
+                    icon: Icons.open_in_new_rounded,
+                    onPressed: _openAndroidLocationSettings,
+                  ),
+                  const SizedBox(height: 8),
+                  AppButton(
+                    label: 'I changed it — check again',
+                    icon: Icons.sync_rounded,
+                    isPrimary: false,
+                    onPressed: _checkPermissionAgain,
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (readySpotlightPlace != null) ...[
             const SizedBox(height: 12),
             AppCard(
@@ -1198,6 +1349,65 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
 
                       await _openEditPlace(context, highlightedPlace);
                     },
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (readySpotlightPlace != null) ...[
+            const SizedBox(height: 12),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'How to test live alerts',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Try a real re-entry test',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Armed place: ${readySpotlightPlace.label}',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Alert radius: ${DistanceFormatterService.usPlaceRadiusLabel(readySpotlightPlace.radiusMeters)}',
+                    style: const TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Live alerts fire on enter. If you were already inside the zone when it armed, step outside the radius and come back in.',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Repeat alerts can also be held back for a while by cooldown.',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
@@ -2143,7 +2353,7 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Live place alerts'),
                   subtitle: const Text(
-                    'Use this stop for live alerts when Premium is on. If it still says Almost ready, use the main screen button to open Android location settings.',
+                    'Use this stop for live alerts when Premium is on. If it still says Almost ready, use the main screen button to open Android location settings and set Location to Allow all the time.',
                   ),
                   value: _locationAlertsEnabled,
                   onChanged: (value) {
