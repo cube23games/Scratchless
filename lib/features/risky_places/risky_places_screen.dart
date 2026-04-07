@@ -718,6 +718,34 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
     return 'Ready and watching';
   }
 
+  String? _placeLastActivity(RiskyPlace place) {
+    if (!_isPlaceReady(place)) {
+      return null;
+    }
+
+    final label = place.label;
+
+    for (final event in _debugState.recentEvents) {
+      final message = event.message;
+      final timeLabel = _eventTimeLabel(event.createdAt);
+
+      if (message == 'Live alert sent for $label') {
+        return 'Last activity: Alert sent at $timeLabel';
+      }
+      if (message == 'Entered $label radius') {
+        return 'Last activity: Entered radius at $timeLabel';
+      }
+      if (message == 'Held by cooldown for $label') {
+        return 'Last activity: Cooldown held at $timeLabel';
+      }
+      if (message == 'Waiting for re-entry for $label') {
+        return 'Last activity: Waiting for re-entry at $timeLabel';
+      }
+    }
+
+    return 'Last activity: Watching now';
+  }
+
   bool _needsBackgroundPermissionWalkthrough() {
     if (!widget.premiumState.isPremium) {
       return false;
@@ -1820,6 +1848,16 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                             color: AppTheme.mutedText,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                      if (_placeLastActivity(place) != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          _placeLastActivity(place)!,
+                          style: const TextStyle(
+                            color: AppTheme.mutedText,
+                            fontSize: 12,
                           ),
                         ),
                       ],
