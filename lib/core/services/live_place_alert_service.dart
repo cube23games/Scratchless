@@ -251,7 +251,11 @@ class LivePlaceAlertService {
     }
 
     await tl.Tracelet.startGeofences();
-    _logEvent('${places.length} place(s) armed after permission sync');
+    if (places.length == 1) {
+      _logEvent('Geofence armed for ${places.first.label}');
+    } else {
+      _logEvent('Geofences armed for ${places.length} places');
+    }
   }
 
 
@@ -264,12 +268,12 @@ class LivePlaceAlertService {
     final current = now ?? DateTime.now();
 
     if (!FeatureGateService.placeAlertsUnlocked(premiumState)) {
-      _logEvent('Not sent: premium inactive for ${place.label}');
+      _logEvent('Ignored ${place.label}: Premium inactive');
       return false;
     }
 
     if (!place.locationAlertsEnabled) {
-      _logEvent('Not sent: live alerts disabled for ${place.label}');
+      _logEvent('Ignored ${place.label}: Live alerts off');
       return false;
     }
 
@@ -280,7 +284,7 @@ class LivePlaceAlertService {
     );
 
     if (!decision.allowed) {
-      _logEvent('Not sent: policy blocked ${place.label}');
+      _logEvent('Ignored ${place.label}: Not in a risky window');
       return false;
     }
 
@@ -289,7 +293,7 @@ class LivePlaceAlertService {
     final recentHit = _recentEntryHits[place.id];
     if (recentHit != null &&
         current.difference(recentHit) < _burstSuppressionWindow) {
-      _logEvent('Suppressed duplicate entry for ${place.label}');
+      _logEvent('Waiting for re-entry for ${place.label}');
       return false;
     }
 
@@ -301,7 +305,7 @@ class LivePlaceAlertService {
 
     if (suppressed) {
       _recentEntryHits[place.id] = current;
-      _logEvent('Suppressed by cooldown for ${place.label}');
+      _logEvent('Held by cooldown for ${place.label}');
       return false;
     }
 
@@ -316,7 +320,7 @@ class LivePlaceAlertService {
     );
 
     _recentEntryHits[place.id] = current;
-    _logEvent('Alert sent for ${place.label}');
+    _logEvent('Live alert sent for ${place.label}');
     return true;
   }
 
@@ -339,7 +343,7 @@ class LivePlaceAlertService {
       return;
     }
 
-    _logEvent('Entered ${place.label}');
+    _logEvent('Entered ${place.label} radius');
 
     await handlePlaceEntry(
       premiumState: _latestPremiumState,

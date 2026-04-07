@@ -645,6 +645,79 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
         : '${_readyPlaceCount()} places ready';
   }
 
+  int _sentAlertEventCount() {
+    return _debugState.recentEvents
+        .where((event) => event.message.startsWith('Live alert sent for '))
+        .length;
+  }
+
+  String? _latestSentAlertPlaceLabel() {
+    for (final event in _debugState.recentEvents) {
+      const prefix = 'Live alert sent for ';
+      if (event.message.startsWith(prefix)) {
+        return event.message.substring(prefix.length);
+      }
+    }
+    return null;
+  }
+
+  bool _showTriggerSuccessCard() {
+    return _sentAlertEventCount() > 0;
+  }
+
+  String _triggerSuccessHeadline() {
+    return _sentAlertEventCount() == 1
+        ? 'Your first live alert fired'
+        : 'Live alerts are firing';
+  }
+
+  String _triggerSuccessBody() {
+    final label = _latestSentAlertPlaceLabel();
+
+    if (_sentAlertEventCount() == 1 && label != null) {
+      return 'ScratchLess noticed $label and sent the alert.';
+    }
+
+    if (label != null) {
+      return 'ScratchLess recently noticed $label and sent a live alert.';
+    }
+
+    return 'ScratchLess recently noticed a risky stop and sent the alert.';
+  }
+
+  String _triggerSuccessCountLabel() {
+    return _sentAlertEventCount() == 1
+        ? '1 recent alert'
+        : '${_sentAlertEventCount()} recent alerts';
+  }
+
+  String? _placeTriggerState(RiskyPlace place) {
+    if (!_isPlaceReady(place)) {
+      return null;
+    }
+
+    final label = place.label;
+
+    for (final event in _debugState.recentEvents) {
+      final message = event.message;
+
+      if (message == 'Held by cooldown for $label') {
+        return 'Cooldown active';
+      }
+      if (message == 'Waiting for re-entry for $label') {
+        return 'Waiting for re-entry';
+      }
+      if (message == 'Live alert sent for $label') {
+        return 'Last alert sent recently';
+      }
+      if (message == 'Entered $label radius') {
+        return 'Entered recently';
+      }
+    }
+
+    return 'Ready and watching';
+  }
+
   bool _needsBackgroundPermissionWalkthrough() {
     if (!widget.premiumState.isPremium) {
       return false;
@@ -1222,6 +1295,48 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
               ),
             ),
           ],
+          if (_showTriggerSuccessCard()) ...[
+            const SizedBox(height: 12),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Live alert fired',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _triggerSuccessHeadline(),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _triggerSuccessBody(),
+                          style: const TextStyle(
+                            color: AppTheme.mutedText,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      _buildSignalChip(_triggerSuccessCountLabel(), accent: true),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (readySpotlightPlace != null) ...[
             const SizedBox(height: 12),
             AppCard(
@@ -1403,6 +1518,14 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                   ),
                   const SizedBox(height: 6),
                   const Text(
+                    'If nothing happens yet, make sure you fully left the radius before testing the re-entry.',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
                     'Repeat alerts can also be held back for a while by cooldown.',
                     style: TextStyle(
                       color: AppTheme.mutedText,
@@ -1424,6 +1547,14 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                     color: AppTheme.mutedText,
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'This feed shows when places arm, when you enter a radius, when an alert is sent, and when cooldown holds it back.',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 13,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -1681,6 +1812,17 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                           ),
                         ],
                       ),
+                      if (_placeTriggerState(place) != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          'Trigger state: ${_placeTriggerState(place)}',
+                          style: const TextStyle(
+                            color: AppTheme.mutedText,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 8),
                       Text(
                         _editCue(place),
