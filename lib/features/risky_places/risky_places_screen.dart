@@ -364,6 +364,27 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
     return _friendlyPlaceState(_placeDebugStatus(place.id));
   }
 
+  Color _stateColor(String state) {
+    switch (state) {
+      case 'Ready':
+        return AppTheme.accent;
+      case 'Almost ready':
+        return Colors.orange.shade700;
+      case 'Location needed':
+        return Colors.amber.shade800;
+      case 'Live alerts off':
+        return Colors.blueGrey.shade700;
+      case 'Premium needed':
+        return Colors.deepPurple.shade400;
+      default:
+        return AppTheme.mutedText;
+    }
+  }
+
+  Color _topRiskColor() {
+    return Colors.deepOrange.shade700;
+  }
+
   bool _isPlaceReady(RiskyPlace place) {
     return _primarySetupState(place) == 'Ready';
   }
@@ -399,12 +420,15 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
     }
   }
 
-  Widget _buildSignalChip(String label, {bool accent = false}) {
-    final Color borderColor =
-        accent ? AppTheme.accent : AppTheme.mutedText.withOpacity(0.18);
-    final Color fillColor = accent
-        ? AppTheme.accent.withOpacity(0.12)
-        : AppTheme.mutedText.withOpacity(0.08);
+  Widget _buildSignalChip(
+    String label, {
+    bool accent = false,
+    Color? color,
+  }) {
+    final Color baseColor =
+        color ?? (accent ? AppTheme.accent : AppTheme.mutedText);
+    final Color borderColor = baseColor.withOpacity(accent ? 0.40 : 0.18);
+    final Color fillColor = baseColor.withOpacity(accent ? 0.14 : 0.08);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -416,7 +440,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
       child: Text(
         label,
         style: TextStyle(
-          color: accent ? AppTheme.accent : AppTheme.mutedText,
+          color: baseColor,
           fontSize: 11,
           fontWeight: FontWeight.w700,
         ),
@@ -444,16 +468,22 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
         .length;
   }
 
-  Widget _buildSummaryMetric(String label, int value) {
+  Widget _buildSummaryMetric(
+    String label,
+    int value, {
+    Color? color,
+  }) {
+    final Color baseColor = color ?? AppTheme.mutedText;
+
     return SizedBox(
       width: 150,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: BoxDecoration(
-          color: AppTheme.mutedText.withOpacity(0.06),
+          color: baseColor.withOpacity(0.08),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppTheme.mutedText.withOpacity(0.12),
+            color: baseColor.withOpacity(0.18),
           ),
         ),
         child: Column(
@@ -461,16 +491,17 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
           children: [
             Text(
               '$value',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w900,
+                color: color,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               label,
-              style: const TextStyle(
-                color: AppTheme.mutedText,
+              style: TextStyle(
+                color: baseColor,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
@@ -1242,10 +1273,10 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Finish Android location access',
                     style: TextStyle(
-                      color: AppTheme.mutedText,
+                      color: _stateColor('Almost ready'),
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
@@ -1358,7 +1389,10 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                           ),
                         ),
                       ),
-                      _buildSignalChip(_triggerSuccessCountLabel(), accent: true),
+                      _buildSignalChip(
+                        _triggerSuccessCountLabel(),
+                        color: _stateColor('Ready'),
+                      ),
                     ],
                   ),
                 ],
@@ -1371,10 +1405,10 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Ready now',
                     style: TextStyle(
-                      color: AppTheme.mutedText,
+                      color: _stateColor('Ready'),
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
@@ -1400,7 +1434,10 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                           ),
                         ),
                       ),
-                      _buildSignalChip(_readySpotlightCountLabel(), accent: true),
+                      _buildSignalChip(
+                        _readySpotlightCountLabel(),
+                        color: _stateColor('Ready'),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -1421,10 +1458,10 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Next best step',
                     style: TextStyle(
-                      color: AppTheme.mutedText,
+                      color: _stateColor(_primarySetupState(highlightedPlace)),
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
@@ -1451,15 +1488,19 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                         ),
                       ),
                       if (highlightedPlace.isTopRisk)
-                        _buildSignalChip('Top risk', accent: true),
+                        _buildSignalChip(
+                          'Top risk',
+                          color: _topRiskColor(),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Text(
                     _primarySetupState(highlightedPlace),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
+                      color: _stateColor(_primarySetupState(highlightedPlace)),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -1630,9 +1671,21 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                     runSpacing: 8,
                     children: [
                       _buildSummaryMetric('Saved', _savedPlaceCount()),
-                      _buildSummaryMetric('Ready', _readyPlaceCount()),
-                      _buildSummaryMetric('Need location', _needLocationCount()),
-                      _buildSummaryMetric('Alerts off', _alertsOffCount()),
+                      _buildSummaryMetric(
+                        'Ready',
+                        _readyPlaceCount(),
+                        color: _stateColor('Ready'),
+                      ),
+                      _buildSummaryMetric(
+                        'Need location',
+                        _needLocationCount(),
+                        color: _stateColor('Location needed'),
+                      ),
+                      _buildSummaryMetric(
+                        'Alerts off',
+                        _alertsOffCount(),
+                        color: _stateColor('Live alerts off'),
+                      ),
                     ],
                   ),
                 ],
@@ -1785,11 +1838,17 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                             ),
                           ),
                           if (_isPlaceReady(place)) ...[
-                            _buildSignalChip(_readyBadgeLabel(place), accent: true),
+                            _buildSignalChip(
+                              _readyBadgeLabel(place),
+                              color: _stateColor('Ready'),
+                            ),
                             const SizedBox(width: 8),
                           ],
                           if (place.isTopRisk)
-                            _buildSignalChip('Top risk'),
+                            _buildSignalChip(
+                              'Top risk',
+                              color: _topRiskColor(),
+                            ),
                         ],
                       ),
                       if (place.note.trim().isNotEmpty) ...[
@@ -1808,7 +1867,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
-                          color: _isPlaceReady(place) ? AppTheme.accent : null,
+                          color: _stateColor(_primarySetupState(place)),
                         ),
                       ),
                       const SizedBox(height: 4),
