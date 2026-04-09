@@ -1,8 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../features/live_alert/live_alert_rescue_screen.dart';
 import '../models/reminder_settings.dart';
 import 'risky_time_service.dart';
 
@@ -24,7 +26,10 @@ class LocalNotificationService {
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
+  final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
 
+  String? _pendingLiveAlertPlaceLabel;
   bool _initialized = false;
 
   Future<void> initialize() async {
@@ -33,7 +38,6 @@ class LocalNotificationService {
     }
 
     tz_data.initializeTimeZones();
-
     try {
       final timezone = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(timezone.identifier));
@@ -48,7 +52,10 @@ class LocalNotificationService {
       android: androidSettings,
     );
 
-    await _plugin.initialize(settings);
+    await _plugin.initialize(
+      settings,
+      onDidReceiveNotificationResponse: _handleNotificationResponse,
+    );
 
     final androidPlugin =
         _plugin.resolvePlatformSpecificImplementation<
@@ -63,6 +70,16 @@ class LocalNotificationService {
       ),
     );
 
+    final launchDetails = await _plugin.getNotificationAppLaunchDetails();
+    final launchPayload = launchDetails?.notificationResponse?.payload;
+    if (launchPayload != null && launchPayload.startsWith('live-alert:')) {
+      _pendingLiveAlertPlaceLabel =
+          Uri.decodeComponent(launchPayload.substring('live-alert:'.length));
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _drainPendingLiveAlertNavigation();
+      });
+    }
+
     _initialized = true;
   }
 
@@ -73,8 +90,7 @@ class LocalNotificationService {
     await initialize();
     await cancelAllReminderNotifications();
 
-    final shouldScheduleRiskyTime =
-        settings.habitTimeWarningsEnabled &&
+    final shouldScheduleRiskyTime = settings.habitTimeWarningsEnabled &&
         riskyTimeInsight != null &&
         riskyTimeInsight.hasEnoughData &&
         riskyTimeInsight.anchorHour != null;
@@ -113,7 +129,6 @@ class LocalNotificationService {
     final androidPlugin =
         _plugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
-
     return await androidPlugin?.requestNotificationsPermission() ?? true;
   }
 
@@ -173,9 +188,39 @@ class LocalNotificationService {
     );
   }
 
+  void _handleNotificationResponse(NotificationResponse response) {
+    final payload = response.payload;
+    if (payload == null || !payload.startsWith('live-alert:')) {
+      return;
+    }
+
+    final encoded = payload.substring('live-alert:'.length);
+    final placeLabel = Uri.decodeComponent(encoded);
+    _pendingLiveAlertPlaceLabel = placeLabel;
+    _drainPendingLiveAlertNavigation();
+  }
+
+  void _drainPendingLiveAlertNavigation() {
+    final pending = _pendingLiveAlertPlaceLabel;
+    final navigator = navigatorKey.currentState;
+
+    if (pending == null || navigator == null) {
+      return;
+    }
+
+    _pendingLiveAlertPlaceLabel = null;
+
+    navigator.push(
+      MaterialPageRoute<void>(
+        builder: (_) => LiveAlertRescueScreen(placeLabel: pending),
+      ),
+    );
+  }
+
   Future<void> showLivePlaceAlert({
     required String headline,
     required String body,
+    required String placeLabel,
   }) async {
     await initialize();
 
@@ -189,6 +234,7 @@ class LocalNotificationService {
       headline,
       body,
       _notificationDetails(),
+      payload: 'live-alert:${Uri.encodeComponent(placeLabel)}',
     );
   }
 

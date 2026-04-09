@@ -543,6 +543,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: LocalNotificationService.instance.navigatorKey,
       title: 'ScratchLess',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark(),

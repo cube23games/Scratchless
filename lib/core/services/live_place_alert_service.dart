@@ -325,6 +325,7 @@ class LivePlaceAlertService {
     await LocalNotificationService.instance.showLivePlaceAlert(
       headline: _liveAlertHeadline(),
       body: _liveAlertBody(place),
+      placeLabel: place.label,
     );
 
     await PlaceAlertCooldownService.instance.markFired(
