@@ -6,10 +6,12 @@ import '../../shared/widgets/app_card.dart';
 
 class LiveAlertRescueScreen extends StatefulWidget {
   final String placeLabel;
+  final bool autoStartTenMinutePause;
 
   const LiveAlertRescueScreen({
     super.key,
     required this.placeLabel,
+    this.autoStartTenMinutePause = false,
   });
 
   @override
@@ -18,14 +20,29 @@ class LiveAlertRescueScreen extends StatefulWidget {
 
 class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
   DateTime? _waitUntil;
+  bool _autoStarted = false;
 
-  String get _headline =>
-      widget.placeLabel.trim().isEmpty ? 'Pause before you go in' : 'Pause before ${widget.placeLabel}';
+  String get _headline => widget.placeLabel.trim().isEmpty
+      ? 'Pause before you go in'
+      : 'Pause before ${widget.placeLabel}';
 
-  String get _body =>
-      widget.placeLabel.trim().isEmpty
-          ? 'This stop has been risky before. Give yourself one more pause before you decide.'
-          : '${widget.placeLabel} has been risky before. Give yourself one more pause before you decide.';
+  String get _body => widget.placeLabel.trim().isEmpty
+      ? 'This stop has been risky before. Give yourself one more pause before you decide.'
+      : '${widget.placeLabel} has been risky before. Give yourself one more pause before you decide.';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.autoStartTenMinutePause) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _autoStarted) {
+          return;
+        }
+        _autoStarted = true;
+        _startTenMinutePause(showSnackBar: false);
+      });
+    }
+  }
 
   String _timeLabel(DateTime time) {
     final hour = time.hour.toString().padLeft(2, '0');
@@ -33,10 +50,14 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
     return '$hour:$minute';
   }
 
-  void _startTenMinutePause() {
+  void _startTenMinutePause({bool showSnackBar = true}) {
     setState(() {
       _waitUntil = DateTime.now().add(const Duration(minutes: 10));
     });
+
+    if (!showSnackBar || !mounted) {
+      return;
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(

@@ -24,12 +24,16 @@ class LocalNotificationService {
   static const String _channelDescription =
       'Gentle reminders to check in and pause before buying';
 
+  static const String _liveAlertPayloadPrefix = 'live-alert:';
+  static const String _wait10ActionId = 'wait10';
+
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
   String? _pendingLiveAlertPlaceLabel;
+  String? _pendingLiveAlertActionId;
   bool _initialized = false;
 
   Future<void> initialize() async {
@@ -72,9 +76,14 @@ class LocalNotificationService {
 
     final launchDetails = await _plugin.getNotificationAppLaunchDetails();
     final launchPayload = launchDetails?.notificationResponse?.payload;
-    if (launchPayload != null && launchPayload.startsWith('live-alert:')) {
-      _pendingLiveAlertPlaceLabel =
-          Uri.decodeComponent(launchPayload.substring('live-alert:'.length));
+    final launchActionId = launchDetails?.notificationResponse?.actionId;
+
+    if (launchPayload != null &&
+        launchPayload.startsWith(_liveAlertPayloadPrefix)) {
+      _pendingLiveAlertPlaceLabel = Uri.decodeComponent(
+        launchPayload.substring(_liveAlertPayloadPrefix.length),
+      );
+      _pendingLiveAlertActionId = launchActionId;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _drainPendingLiveAlertNavigation();
       });
@@ -188,31 +197,57 @@ class LocalNotificationService {
     );
   }
 
+  NotificationDetails _liveAlertNotificationDetails() {
+    return const NotificationDetails(
+      android: AndroidNotificationDetails(
+        _channelId,
+        _channelName,
+        channelDescription: _channelDescription,
+        importance: Importance.high,
+        priority: Priority.high,
+        actions: <AndroidNotificationAction>[
+          AndroidNotificationAction(
+            _wait10ActionId,
+            'Wait 10 min',
+            showsUserInterface: true,
+          ),
+        ],
+      ),
+    );
+  }
+
   void _handleNotificationResponse(NotificationResponse response) {
     final payload = response.payload;
-    if (payload == null || !payload.startsWith('live-alert:')) {
+    if (payload == null || !payload.startsWith(_liveAlertPayloadPrefix)) {
       return;
     }
 
-    final encoded = payload.substring('live-alert:'.length);
-    final placeLabel = Uri.decodeComponent(encoded);
-    _pendingLiveAlertPlaceLabel = placeLabel;
+    final encoded = payload.substring(_liveAlertPayloadPrefix.length);
+    _pendingLiveAlertPlaceLabel = Uri.decodeComponent(encoded);
+    _pendingLiveAlertActionId = response.actionId;
     _drainPendingLiveAlertNavigation();
   }
 
   void _drainPendingLiveAlertNavigation() {
-    final pending = _pendingLiveAlertPlaceLabel;
+    final pendingPlace = _pendingLiveAlertPlaceLabel;
+    final pendingAction = _pendingLiveAlertActionId;
     final navigator = navigatorKey.currentState;
 
-    if (pending == null || navigator == null) {
+    if (pendingPlace == null || navigator == null) {
       return;
     }
 
     _pendingLiveAlertPlaceLabel = null;
+    _pendingLiveAlertActionId = null;
+
+    final autoStartTenMinutePause = pendingAction == _wait10ActionId;
 
     navigator.push(
       MaterialPageRoute<void>(
-        builder: (_) => LiveAlertRescueScreen(placeLabel: pending),
+        builder: (_) => LiveAlertRescueScreen(
+          placeLabel: pendingPlace,
+          autoStartTenMinutePause: autoStartTenMinutePause,
+        ),
       ),
     );
   }
@@ -233,8 +268,8 @@ class LocalNotificationService {
       _livePlaceAlertId,
       headline,
       body,
-      _notificationDetails(),
-      payload: 'live-alert:${Uri.encodeComponent(placeLabel)}',
+      _liveAlertNotificationDetails(),
+      payload: '$_liveAlertPayloadPrefix${Uri.encodeComponent(placeLabel)}',
     );
   }
 
