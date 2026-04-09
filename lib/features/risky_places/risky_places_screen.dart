@@ -399,8 +399,8 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
 
   String _editCue(RiskyPlace place) {
     return _primarySetupState(place) == 'Ready'
-        ? 'Tap to edit'
-        : 'Tap to finish setup';
+        ? 'Edit place'
+        : 'Finish setup';
   }
 
   String _confidenceBadgeLabel(RiskyPlace place) {
@@ -613,14 +613,14 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
 
   String _highlightedPlaceReason(RiskyPlace place) {
     if (_primarySetupState(place) == 'Almost ready') {
-      return 'Open Android settings and allow location all the time to finish this place.';
+      return 'Open Android settings to finish this place.';
     }
 
     if (place.isTopRisk) {
-      return 'This one matters most because it is marked top risk.';
+      return 'This one is marked top risk.';
     }
 
-    return 'This is the next place most likely to move your setup forward.';
+    return 'This is the next place to finish.';
   }
 
   String _highlightedPlaceCtaLabel(RiskyPlace place) {
@@ -666,8 +666,8 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
 
   String _readySpotlightBody() {
     return _readyPlaceCount() == 1
-        ? 'ScratchLess can now watch this stop and nudge you before it turns automatic.'
-        : 'ScratchLess can now watch your ready places and help interrupt automatic stops.';
+        ? 'ScratchLess can now watch this stop before it turns automatic.'
+        : 'ScratchLess can now watch your ready places.';
   }
 
   String _readySpotlightCountLabel() {
@@ -761,20 +761,35 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
       final timeLabel = _eventTimeLabel(event.createdAt);
 
       if (message == 'Live alert sent for $label') {
-        return 'Last activity: Alert sent at $timeLabel';
+        return 'Last alert: $timeLabel';
       }
       if (message == 'Entered $label radius') {
-        return 'Last activity: Entered radius at $timeLabel';
+        return 'Last entered: $timeLabel';
       }
       if (message == 'Held by cooldown for $label') {
-        return 'Last activity: Cooldown held at $timeLabel';
+        return 'Cooldown held at $timeLabel';
       }
       if (message == 'Waiting for re-entry for $label') {
-        return 'Last activity: Waiting for re-entry at $timeLabel';
+        return 'Waiting since $timeLabel';
       }
     }
 
-    return 'Last activity: Watching now';
+    return null;
+  }
+
+  String? _placeTriggerStateForCard(RiskyPlace place) {
+    final trigger = _placeTriggerState(place);
+
+    if (trigger == null) {
+      return null;
+    }
+
+    if (trigger == 'Last alert sent recently' ||
+        trigger == 'Entered recently') {
+      return null;
+    }
+
+    return trigger;
   }
 
   bool _needsBackgroundPermissionWalkthrough() {
@@ -1247,16 +1262,6 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                     fontSize: 13,
                   ),
                 ),
-                if (_debugState.lastEventMessage != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Last event: ${_debugState.lastEventMessage}',
-                    style: const TextStyle(
-                      color: AppTheme.mutedText,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 10),
                 AppButton(
                   label: 'Refresh live alert status',
@@ -1291,7 +1296,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Live alerts need Android location access set to "Allow all the time" before risky places can arm.',
+                    'Live alerts need Android location set to "Allow all the time".',
                     style: TextStyle(
                       color: AppTheme.mutedText,
                       fontSize: 14,
@@ -1299,7 +1304,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    '1. Tap Open Android location settings',
+                    '1. Open Android location settings',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -1307,7 +1312,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    '2. Open Permissions',
+                    '2. Permissions > Location',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -1315,7 +1320,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    '3. Open Location',
+                    '3. Choose "Allow all the time"',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -1323,15 +1328,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    '4. Choose "Allow all the time"',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    '5. Return to ScratchLess and tap check again',
+                    '4. Return here and tap check again',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -1579,7 +1576,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Live alerts fire on enter. If you were already inside the zone when it armed, step outside the radius and come back in.',
+                    'Alerts fire on enter. If you were already inside the zone when it armed, step outside and come back in.',
                     style: TextStyle(
                       color: AppTheme.mutedText,
                       fontSize: 13,
@@ -1587,15 +1584,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    'If nothing happens yet, make sure you fully left the radius before testing the re-entry.',
-                    style: TextStyle(
-                      color: AppTheme.mutedText,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Repeat alerts can also be held back for a while by cooldown.',
+                    'If nothing happens, make sure you fully left the radius first. Cooldown can also hold repeat alerts for a while.',
                     style: TextStyle(
                       color: AppTheme.mutedText,
                       fontSize: 13,
@@ -1620,7 +1609,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'This feed shows when places arm, when you enter a radius, when an alert is sent, and when cooldown holds it back.',
+                  'Shows when places arm, when you enter, and when alerts send or cooldown.',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 13,
@@ -1899,10 +1888,10 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                           ),
                         ],
                       ),
-                      if (_placeTriggerState(place) != null) ...[
+                      if (_placeTriggerStateForCard(place) != null) ...[
                         const SizedBox(height: 6),
                         Text(
-                          'Trigger state: ${_placeTriggerState(place)}',
+                          'Trigger state: ${_placeTriggerStateForCard(place)}',
                           style: const TextStyle(
                             color: AppTheme.mutedText,
                             fontSize: 12,
