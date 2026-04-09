@@ -259,6 +259,19 @@ class LivePlaceAlertService {
   }
 
 
+  String _liveAlertHeadline() {
+    return 'Pause before you go in';
+  }
+
+  String _liveAlertBody(RiskyPlace place) {
+    final label = place.label.trim();
+    if (label.isEmpty) {
+      return "You're near a saved risky place. Open Rescue before you decide.";
+    }
+
+    return "You're near $label. Open Rescue before you decide.";
+  }
+
   Future<bool> handlePlaceEntry({
     required PremiumState premiumState,
     required RiskyPlace place,
@@ -310,8 +323,8 @@ class LivePlaceAlertService {
     }
 
     await LocalNotificationService.instance.showLivePlaceAlert(
-      headline: decision.headline,
-      body: decision.body,
+      headline: _liveAlertHeadline(),
+      body: _liveAlertBody(place),
     );
 
     await PlaceAlertCooldownService.instance.markFired(
