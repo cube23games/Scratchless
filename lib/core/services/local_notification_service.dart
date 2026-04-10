@@ -4,9 +4,13 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
-import '../../features/live_alert/live_alert_rescue_screen.dart';
 import '../models/reminder_settings.dart';
 import 'risky_time_service.dart';
+
+typedef LiveAlertLaunchHandler = Future<void> Function({
+  required String placeLabel,
+  required bool autoStartTenMinutePause,
+});
 
 class LocalNotificationService {
   LocalNotificationService._();
@@ -32,9 +36,15 @@ class LocalNotificationService {
   final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
+  LiveAlertLaunchHandler? _liveAlertLaunchHandler;
   String? _pendingLiveAlertPlaceLabel;
   String? _pendingLiveAlertActionId;
   bool _initialized = false;
+
+  void registerLiveAlertLauncher(LiveAlertLaunchHandler launcher) {
+    _liveAlertLaunchHandler = launcher;
+    _drainPendingLiveAlertNavigation();
+  }
 
   Future<void> initialize() async {
     if (_initialized) {
@@ -231,24 +241,18 @@ class LocalNotificationService {
   void _drainPendingLiveAlertNavigation() {
     final pendingPlace = _pendingLiveAlertPlaceLabel;
     final pendingAction = _pendingLiveAlertActionId;
-    final navigator = navigatorKey.currentState;
+    final launcher = _liveAlertLaunchHandler;
 
-    if (pendingPlace == null || navigator == null) {
+    if (pendingPlace == null || launcher == null) {
       return;
     }
 
     _pendingLiveAlertPlaceLabel = null;
     _pendingLiveAlertActionId = null;
 
-    final autoStartTenMinutePause = pendingAction == _wait10ActionId;
-
-    navigator.push(
-      MaterialPageRoute<void>(
-        builder: (_) => LiveAlertRescueScreen(
-          placeLabel: pendingPlace,
-          autoStartTenMinutePause: autoStartTenMinutePause,
-        ),
-      ),
+    launcher(
+      placeLabel: pendingPlace,
+      autoStartTenMinutePause: pendingAction == _wait10ActionId,
     );
   }
 

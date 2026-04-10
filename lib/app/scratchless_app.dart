@@ -21,6 +21,7 @@ import '../core/services/weekly_reflection_service.dart';
 import '../core/services/weekly_summary_service.dart';
 import '../core/storage/app_storage.dart';
 import '../features/home/home_shell.dart';
+import '../features/live_alert/live_alert_rescue_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import 'app_theme.dart';
 
@@ -540,8 +541,34 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     _persistState();
   }
 
+  Future<void> _openLiveAlertRescue({
+    required String placeLabel,
+    required bool autoStartTenMinutePause,
+  }) async {
+    final navigator = LocalNotificationService.instance.navigatorKey.currentState;
+    if (navigator == null) {
+      return;
+    }
+
+    await navigator.push(
+      MaterialPageRoute<void>(
+        builder: (_) => LiveAlertRescueScreen(
+          placeLabel: placeLabel,
+          autoStartTenMinutePause: autoStartTenMinutePause,
+          stopReasons: _stopReasons,
+          accountabilityPartner: _accountabilityPartner,
+          onLogUrge: _completeDetailedUrgeSession,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    LocalNotificationService.instance.registerLiveAlertLauncher(
+      _openLiveAlertRescue,
+    );
+
     return MaterialApp(
       navigatorKey: LocalNotificationService.instance.navigatorKey,
       title: 'ScratchLess',
