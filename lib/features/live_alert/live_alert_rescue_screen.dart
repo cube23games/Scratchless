@@ -36,6 +36,9 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
   bool _usedReasons = false;
   bool _usedSupport = false;
   bool _usedWait = false;
+  bool _leavingConfirmed = false;
+  String? _actionFeedbackTitle;
+  String? _actionFeedbackBody;
 
   String get _headline => widget.placeLabel.trim().isEmpty
       ? 'Pause before you go in'
@@ -89,18 +92,76 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
     return 'Saved reason';
   }
 
-  Future<void> _copyText(String text, String confirmation) async {
-    await Clipboard.setData(ClipboardData(text: text));
-
+  void _showFeedback(String message) {
     if (!mounted) {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(confirmation),
-      ),
-    );
+    final messenger = ScaffoldMessenger.of(context);
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+        ),
+      );
+  }
+
+  void _setActionFeedback({
+    required String title,
+    required String body,
+    bool showSnackBar = true,
+  }) {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _actionFeedbackTitle = title;
+      _actionFeedbackBody = body;
+    });
+
+    if (showSnackBar) {
+      _showFeedback(body);
+    }
+  }
+
+  Future<void> _clearPauseWhenFinished(
+    DateTime waitUntil,
+  ) async {
+    final delay = waitUntil.difference(DateTime.now());
+
+    if (delay.isNegative) {
+      return;
+    }
+
+    await Future<void>.delayed(delay);
+
+    if (!mounted || _waitUntil != waitUntil) {
+      return;
+    }
+
+    final pauseWasLatestFeedback =
+        _actionFeedbackTitle == '10-minute pause active';
+
+    setState(() {
+      _waitUntil = null;
+
+      if (pauseWasLatestFeedback) {
+        _actionFeedbackTitle = '10-minute pause complete';
+        _actionFeedbackBody =
+            'You created real distance from the automatic decision. Choose what protects you next.';
+      }
+    });
+  }
+
+  Future<void> _copyText(
+    String text,
+    String confirmation,
+  ) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    _showFeedback(confirmation);
   }
 
   Future<void> _sendSmsOrCopy({
@@ -116,11 +177,40 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
       },
     );
 
-    final ok = await launchUrl(uri);
-
-    if (!ok && mounted) {
-      await _copyText(body, copiedMessage);
+    if (mounted) {
+      setState(() {
+        _usedSupport = true;
+      });
     }
+
+    var opened = false;
+
+    try {
+      opened = await launchUrl(uri);
+    } catch (_) {
+      opened = false;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    if (opened) {
+      _setActionFeedback(
+        title: 'Text message opened',
+        body:
+            'Send the message now so someone knows you need support.',
+      );
+      return;
+    }
+
+    await _copyText(body, copiedMessage);
+
+    _setActionFeedback(
+      title: 'Support message copied',
+      body: copiedMessage,
+      showSnackBar: false,
+    );
   }
 
   Future<void> _sendEmailOrCopy({
@@ -137,34 +227,94 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
       },
     );
 
-    final ok = await launchUrl(uri);
-
-    if (!ok && mounted) {
-      await _copyText(body, copiedMessage);
+    if (mounted) {
+      setState(() {
+        _usedSupport = true;
+      });
     }
-  }
 
-  void _startTenMinutePause({bool showSnackBar = true}) {
-    setState(() {
-      _usedWait = true;
-      _waitUntil = DateTime.now().add(const Duration(minutes: 10));
-    });
+    var opened = false;
 
-    if (!showSnackBar || !mounted) {
+    try {
+      opened = await launchUrl(uri);
+    } catch (_) {
+      opened = false;
+    }
+
+    if (!mounted) {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Ten-minute pause started. Stay out of the store and let the urge pass a little.',
-        ),
-      ),
+    if (opened) {
+      _setActionFeedback(
+        title: 'Email draft opened',
+        body:
+            'Send the email now so someone knows you need support.',
+      );
+      return;
+    }
+
+    await _copyText(body, copiedMessage);
+
+    _setActionFeedback(
+      title: 'Support message copied',
+      body: copiedMessage,
+      showSnackBar: false,
     );
   }
 
+  void _startTenMinutePause({
+    bool showSnackBar = true,
+  }) {
+    final now = DateTime.now();
+    final activeUntil = _waitUntil;
+
+    if (activeUntil != null &&
+        activeUntil.isAfter(now)) {
+      if (showSnackBar) {
+        _showFeedback(
+          'Pause already running until ${_timeLabel(activeUntil)}. Stay outside and keep moving away.',
+        );
+      }
+      return;
+    }
+
+    final waitUntil =
+        now.add(const Duration(minutes: 10));
+
+    setState(() {
+      _usedWait = true;
+      _waitUntil = waitUntil;
+      _actionFeedbackTitle = '10-minute pause active';
+      _actionFeedbackBody =
+          'Stay outside and use another rescue tool while time works in your favor.';
+    });
+
+    _clearPauseWhenFinished(waitUntil);
+
+    if (showSnackBar) {
+      _showFeedback(
+        'Ten-minute pause started. Stay outside and give the urge time to weaken.',
+      );
+    }
+  }
+
   void _leaveNow() {
-    Navigator.of(context).maybePop();
+    if (_leavingConfirmed) {
+      Navigator.of(context).maybePop();
+      return;
+    }
+
+    setState(() {
+      _leavingConfirmed = true;
+      _actionFeedbackTitle = 'You chose to leave';
+      _actionFeedbackBody =
+          'Nice work. Put distance between you and the stop.';
+    });
+
+    _showFeedback(
+      'Nice work. Put distance between you and the stop.',
+    );
   }
 
   void _openReasonsSheet() {
@@ -276,13 +426,11 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
                   icon: Icons.sms_outlined,
                   onPressed: () async {
                     Navigator.of(sheetContext).pop();
-                    setState(() {
-                      _usedSupport = true;
-                    });
                     await _sendSmsOrCopy(
                       phone: partner.phone!,
                       body: supportMessage,
-                      copiedMessage: 'Support message copied.',
+                      copiedMessage:
+                          'Text app was unavailable. Support message copied instead.',
                     );
                   },
                 )
@@ -292,13 +440,11 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
                   icon: Icons.mail_outline_rounded,
                   onPressed: () async {
                     Navigator.of(sheetContext).pop();
-                    setState(() {
-                      _usedSupport = true;
-                    });
                     await _sendEmailOrCopy(
                       email: partner.email!,
                       body: supportMessage,
-                      copiedMessage: 'Support message copied.',
+                      copiedMessage:
+                          'Email app was unavailable. Support message copied instead.',
                     );
                   },
                 )
@@ -308,9 +454,25 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
                   icon: Icons.copy_rounded,
                   onPressed: () async {
                     Navigator.of(sheetContext).pop();
+
+                    if (mounted) {
+                      setState(() {
+                        _usedSupport = true;
+                      });
+                    }
+
+                    const copiedMessage =
+                        'Support message copied. Paste and send it now.';
+
                     await _copyText(
                       supportMessage,
-                      'Support message copied.',
+                      copiedMessage,
+                    );
+
+                    _setActionFeedback(
+                      title: 'Support message copied',
+                      body: copiedMessage,
+                      showSnackBar: false,
                     );
                   },
                 ),
@@ -456,6 +618,34 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
               ],
             ),
           ),
+          if (_actionFeedbackTitle != null &&
+              _actionFeedbackBody != null) ...[
+            const SizedBox(height: 12),
+            AppCard(
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _actionFeedbackTitle!,
+                    style: TextStyle(
+                      color: AppTheme.accent,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _actionFeedbackBody!,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           AppCard(
             child: Column(
@@ -488,11 +678,19 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
                 if (_waitUntil != null) ...[
                   const SizedBox(height: 10),
                   Text(
-                    'Pause running until ${_timeLabel(_waitUntil!)}',
+                    '10-minute pause active until ${_timeLabel(_waitUntil!)}',
                     style: TextStyle(
                       color: AppTheme.accent,
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Stay outside and use another rescue tool while time works in your favor.',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
                     ),
                   ),
                 ],
@@ -501,15 +699,23 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
           ),
           const SizedBox(height: 12),
           AppButton(
-            label: 'Give me 10 minutes',
-            icon: Icons.timer_outlined,
+            label: _waitUntil == null
+                ? 'Give me 10 minutes'
+                : 'Pause running',
+            icon: _waitUntil == null
+                ? Icons.timer_outlined
+                : Icons.hourglass_top_rounded,
             onPressed: _startTenMinutePause,
           ),
           const SizedBox(height: 8),
           AppButton(
-            label: 'I’m leaving now',
-            icon: Icons.arrow_back_rounded,
-            isPrimary: false,
+            label: _leavingConfirmed
+                ? 'Done — keep moving'
+                : 'I’m leaving now',
+            icon: _leavingConfirmed
+                ? Icons.directions_walk_rounded
+                : Icons.arrow_back_rounded,
+            isPrimary: _leavingConfirmed,
             onPressed: _leaveNow,
           ),
           const SizedBox(height: 12),
