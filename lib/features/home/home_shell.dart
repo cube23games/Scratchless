@@ -63,6 +63,7 @@ class HomeShell extends StatefulWidget {
   final VoidCallback onStartPremiumTrial;
   final Future<String> Function() onEnableLivePlaceAlertsForeground;
   final Future<String> Function() onEnableLivePlaceAlertsBackground;
+  final VoidCallback onOpenLiveAlertRescueTest;
   final bool shouldShowSuccessPremiumPrompt;
   final VoidCallback onAcknowledgeSuccessPremiumPrompt;
   final VoidCallback onSaveWeeklyReflectionToHistory;
@@ -112,6 +113,7 @@ class HomeShell extends StatefulWidget {
     required this.onStartPremiumTrial,
     required this.onEnableLivePlaceAlertsForeground,
     required this.onEnableLivePlaceAlertsBackground,
+    required this.onOpenLiveAlertRescueTest,
     required this.shouldShowSuccessPremiumPrompt,
     required this.onAcknowledgeSuccessPremiumPrompt,
     required this.onSaveWeeklyReflectionToHistory,
@@ -329,6 +331,8 @@ class _HomeShellState extends State<HomeShell> {
         onOpenMilestones: _openMilestones,
         onOpenPreStoreMode: _openPreStoreMode,
         onOpenRiskyPlaces: _openRiskyPlaces,
+        onOpenLiveAlertRescueTest:
+            widget.onOpenLiveAlertRescueTest,
         onUpdateGoal: widget.onUpdateGoal,
       ),
     ];

@@ -563,6 +563,33 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     );
   }
 
+  Future<void> _openLiveAlertRescueTest() async {
+    const fallbackLabel = 'Test risky place';
+    var placeLabel = fallbackLabel;
+
+    for (final place in _riskyPlaces) {
+      final label = place.label.trim();
+
+      if (label.isEmpty) {
+        continue;
+      }
+
+      if (placeLabel == fallbackLabel) {
+        placeLabel = label;
+      }
+
+      if (place.isTopRisk) {
+        placeLabel = label;
+        break;
+      }
+    }
+
+    await _openLiveAlertRescue(
+      placeLabel: placeLabel,
+      autoStartTenMinutePause: false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     LocalNotificationService.instance.registerLiveAlertLauncher(
@@ -614,6 +641,8 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
                       _enableLivePlaceAlertsForeground,
                   onEnableLivePlaceAlertsBackground:
                       _enableLivePlaceAlertsBackground,
+                   onOpenLiveAlertRescueTest:
+                       _openLiveAlertRescueTest,
                   shouldShowSuccessPremiumPrompt:
                       PremiumPromptService.canShow(
                     type: PremiumPromptType.firstUrgeWin,

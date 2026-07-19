@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/app_theme.dart';
@@ -32,6 +33,7 @@ class ProfileScreen extends StatelessWidget {
   final VoidCallback onOpenMilestones;
   final VoidCallback onOpenPreStoreMode;
   final VoidCallback onOpenRiskyPlaces;
+  final VoidCallback onOpenLiveAlertRescueTest;
   final ValueChanged<String> onUpdateGoal;
 
   const ProfileScreen({
@@ -57,6 +59,7 @@ class ProfileScreen extends StatelessWidget {
     required this.onOpenMilestones,
     required this.onOpenPreStoreMode,
     required this.onOpenRiskyPlaces,
+    required this.onOpenLiveAlertRescueTest,
     required this.onUpdateGoal,
   });
 
@@ -218,6 +221,41 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
           ),
+          if (kDebugMode) ...[
+            const SizedBox(height: 12),
+            AppCard(
+              onTap: onOpenLiveAlertRescueTest,
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Internal testing',
+                    style: TextStyle(
+                      color: AppTheme.accent,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Test live alert rescue',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Debug build only. Opens the real rescue screen with your saved reasons, accountability contact, and risky-place data.',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           AppCard(
             onTap: onOpenGoals,
