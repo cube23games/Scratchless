@@ -1,4 +1,4 @@
-name: Android Debug APK
+name: Android QA and Store Builds
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  build-debug-apk:
+  build-qa-and-store:
     runs-on: ubuntu-latest
 
     steps:
@@ -34,16 +34,167 @@ jobs:
       - name: Verify pinned Tracelet
         run: flutter pub deps --style=compact | grep -F "tracelet 1.8.13"
 
+      - name: Verify QA and Store source separation
+        run: python tools/verify_sl77a_qa2.py --ci
+
       - name: Test geofence parser
         run: flutter test test/live_place_alert_service_test.dart
 
-      - name: Build debug APK
+      - name: Test QA build configuration
+        run: >
+          flutter test
+          --dart-define=SCRATCHLESS_BUILD=qa
+          --dart-define=EXPECTED_SCRATCHLESS_BUILD=qa
+          test/app_build_config_test.dart
+
+      - name: Test Store build configuration
+        run: >
+          flutter test
+          --dart-define=SCRATCHLESS_BUILD=store
+          --dart-define=EXPECTED_SCRATCHLESS_BUILD=store
+          test/app_build_config_test.dart
+
+      - name: Build QA release APK
         env:
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
-        run: flutter build apk --debug --dart-define=GOOGLE_PLACES_API_KEY=$GOOGLE_PLACES_API_KEY
+        run: >
+          flutter build apk
+          --flavor qa
+          --release
+          --dart-define=SCRATCHLESS_BUILD=qa
+          --dart-define=GOOGLE_PLACES_API_KEY=$GOOGLE_PLACES_API_KEY
 
-      - name: Upload APK artifact
+      - name: Build Store release APK
+        env:
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+        run: >
+          flutter build apk
+          --flavor store
+          --release
+          --dart-define=SCRATCHLESS_BUILD=store
+          --dart-define=GOOGLE_PLACES_API_KEY=$GOOGLE_PLACES_API_KEY
+
+      - name: Build Store release AAB
+        env:
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+        run: >
+          flutter build appbundle
+          --flavor store
+          --release
+          --dart-define=SCRATCHLESS_BUILD=store
+          --dart-define=GOOGLE_PLACES_API_KEY=$GOOGLE_PLACES_API_KEY
+
+      - name: Collect build artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p dist
+
+          qa_apk="$(
+            find build/app/outputs \
+              -type f \
+              -name 'app-qa-release.apk' \
+              -print \
+              -quit
+          )"
+
+          store_apk="$(
+            find build/app/outputs \
+              -type f \
+              -name 'app-store-release.apk' \
+              -print \
+              -quit
+          )"
+
+          store_aab="$(
+            find build/app/outputs \
+              -type f \
+              -name 'app-store-release.aab' \
+              -print \
+              -quit
+          )"
+
+          test -n "$qa_apk"
+          test -f "$qa_apk"
+          test -n "$store_apk"
+          test -f "$store_apk"
+          test -n "$store_aab"
+          test -f "$store_aab"
+
+          cp "$qa_apk" dist/scratchless-qa.apk
+          cp "$store_apk" dist/scratchless-store.apk
+          cp "$store_aab" dist/scratchless-store.aab
+
+          ls -lh dist
+
+      - name: Verify application identities
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          aapt_bin="$(
+            find "$ANDROID_HOME/build-tools" \
+              -type f \
+              -name aapt \
+              -print |
+            sort -V |
+            tail -1
+          )"
+
+          test -n "$aapt_bin"
+          test -x "$aapt_bin"
+
+          "$aapt_bin" dump badging \
+            dist/scratchless-qa.apk \
+            > dist/qa-badging.txt
+
+          "$aapt_bin" dump badging \
+            dist/scratchless-store.apk \
+            > dist/store-badging.txt
+
+          grep -Fq \
+            "package: name='com.cube23.scratchless.qa'" \
+            dist/qa-badging.txt
+
+          grep -Fq \
+            "application-label:'ScratchLess QA'" \
+            dist/qa-badging.txt
+
+          grep -Fq \
+            "package: name='com.cube23.scratchless'" \
+            dist/store-badging.txt
+
+          grep -Fq \
+            "application-label:'ScratchLess'" \
+            dist/store-badging.txt
+
+          if grep -Fq \
+            "package: name='com.cube23.scratchless.qa'" \
+            dist/store-badging.txt; then
+            echo 'Store APK unexpectedly uses the QA application ID.'
+            exit 1
+          fi
+
+          echo 'QA and Store identities verified.'
+
+      - name: Upload QA APK
         uses: actions/upload-artifact@v4
         with:
-          name: scratchless-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: scratchless-qa-apk
+          path: dist/scratchless-qa.apk
+          if-no-files-found: error
+
+      - name: Upload Store APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: scratchless-store-apk
+          path: dist/scratchless-store.apk
+          if-no-files-found: error
+
+      - name: Upload Store AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: scratchless-store-aab
+          path: dist/scratchless-store.aab
+          if-no-files-found: error

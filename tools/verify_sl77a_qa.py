@@ -125,22 +125,22 @@ def verify_profile() -> None:
     text = read("lib/features/profile/profile_screen.dart")
 
     required = {
-        "foundation import":
-            "import 'package:flutter/foundation.dart';",
+        "build-config import":
+            "import '../../core/config/app_build_config.dart';",
         "callback field":
             "final VoidCallback onOpenLiveAlertRescueTest;",
         "constructor argument":
             "required this.onOpenLiveAlertRescueTest,",
-        "debug gate":
-            "if (kDebugMode) ...[",
+        "QA-build gate":
+            "if (AppBuildConfig.qaToolsEnabled) ...[",
         "internal label":
             "'Internal testing'",
         "test title":
             "'Test live alert rescue'",
         "real callback":
             "onTap: onOpenLiveAlertRescueTest",
-        "debug-only explanation":
-            "'Debug build only. Opens the real rescue screen "
+        "QA-only explanation":
+            "'ScratchLess QA only. Opens the real rescue screen "
             "with your saved reasons, accountability contact, "
             "and risky-place data.'",
     }
@@ -166,7 +166,7 @@ def verify_profile() -> None:
             "Expected three Profile QA callback references."
         )
 
-    print("PASS: Profile QA card is debug-only and correctly placed.")
+    print("PASS: Profile QA card is QA-build-only and correctly placed.")
 
 
 def verify_sl77a() -> None:

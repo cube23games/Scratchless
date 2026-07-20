@@ -1,8 +1,8 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../app/app_theme.dart';
+import '../../core/config/app_build_config.dart';
 import '../../core/models/premium_state.dart';
 import '../../core/models/risky_place.dart';
 import '../../core/services/distance_formatter_service.dart';
@@ -1052,6 +1052,41 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
     );
   }
 
+  Future<void> _runQaCooldownReset(
+    RiskyPlace place,
+  ) async {
+    if (_qaActionRunning) {
+      return;
+    }
+
+    setState(() {
+      _qaActionRunning = true;
+    });
+
+    String message;
+
+    try {
+      message = await LivePlaceAlertService.instance
+          .resetQaCooldown(place);
+    } catch (error) {
+      message = 'QA cooldown reset failed: $error';
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _qaActionRunning = false;
+      _debugState =
+          LivePlaceAlertService.instance.getDebugState();
+    });
+
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   Future<void> _openAddPlace(BuildContext context) async {
     final beforePlaceCount = _places.length;
     final beforeReadyCount = _debugState.eligiblePlaceCount;
@@ -1665,7 +1700,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
               ),
             ),
           ],
-          if (kDebugMode &&
+          if (AppBuildConfig.qaToolsEnabled &&
               readySpotlightPlace != null) ...[
             const SizedBox(height: 12),
             AppCard(
@@ -1691,7 +1726,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Debug build only. Confirm Android’s reported location, then test the notification and its tap-to-rescue route without waiting for a geofence transition.',
+                    'ScratchLess QA only. Confirm Android’s reported location, then test the notification and its tap-to-rescue route without waiting for a geofence transition.',
                     style: TextStyle(
                       color: AppTheme.mutedText,
                       fontSize: 13,
@@ -1720,6 +1755,19 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                     onPressed: _qaActionRunning
                         ? null
                         : () => _runQaNotificationTest(
+                              readySpotlightPlace,
+                            ),
+                  ),
+                  const SizedBox(height: 8),
+                  AppButton(
+                    label: _qaActionRunning
+                        ? 'QA action running...'
+                        : 'Reset alert cooldown for this place',
+                    icon: Icons.restart_alt_rounded,
+                    isPrimary: false,
+                    onPressed: _qaActionRunning
+                        ? null
+                        : () => _runQaCooldownReset(
                               readySpotlightPlace,
                             ),
                   ),

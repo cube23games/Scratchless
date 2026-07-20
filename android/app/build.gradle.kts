@@ -31,6 +31,26 @@ android {
         versionName = flutter.versionName
     }
 
+    flavorDimensions += "distribution"
+
+    productFlavors {
+        create("qa") {
+            dimension = "distribution"
+            applicationIdSuffix = ".qa"
+            versionNameSuffix = "-qa"
+            resValue("string", "app_name", "ScratchLess QA")
+            manifestPlaceholders["appIcon"] =
+                "@drawable/ic_launcher_qa"
+        }
+
+        create("store") {
+            dimension = "distribution"
+            resValue("string", "app_name", "ScratchLess")
+            manifestPlaceholders["appIcon"] =
+                "@mipmap/ic_launcher"
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.

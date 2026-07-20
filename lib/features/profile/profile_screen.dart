@@ -1,7 +1,7 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/app_theme.dart';
+import '../../core/config/app_build_config.dart';
 import '../../core/models/accountability_partner.dart';
 import '../../core/models/premium_state.dart';
 import '../../core/models/reminder_settings.dart';
@@ -221,7 +221,7 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
           ),
-          if (kDebugMode) ...[
+          if (AppBuildConfig.qaToolsEnabled) ...[
             const SizedBox(height: 12),
             AppCard(
               onTap: onOpenLiveAlertRescueTest,
@@ -246,7 +246,7 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Debug build only. Opens the real rescue screen with your saved reasons, accountability contact, and risky-place data.',
+                    'ScratchLess QA only. Opens the real rescue screen with your saved reasons, accountability contact, and risky-place data.',
                     style: TextStyle(
                       color: AppTheme.mutedText,
                       fontSize: 14,

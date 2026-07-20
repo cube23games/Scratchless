@@ -39,4 +39,9 @@ class PlaceAlertCooldownService {
       (now ?? DateTime.now()).toIso8601String(),
     );
   }
+
+  Future<void> clear(String placeId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('$_prefix$placeId');
+  }
 }

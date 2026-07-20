@@ -226,10 +226,10 @@ def verify_qa_ui() -> None:
     )
 
     required = {
-        "foundation import":
-            "import 'package:flutter/foundation.dart';",
-        "debug gate":
-            "if (kDebugMode &&",
+        "build-config import":
+            "import '../../core/config/app_build_config.dart';",
+        "QA-build gate":
+            "if (AppBuildConfig.qaToolsEnabled &&",
         "QA heading":
             "'Internal geofence QA'",
         "location button":
@@ -240,12 +240,16 @@ def verify_qa_ui() -> None:
             "_runQaLocationCheck(",
         "notification action":
             "_runQaNotificationTest(",
+        "cooldown reset button":
+            "'Reset alert cooldown for this place'",
+        "cooldown reset action":
+            "_runQaCooldownReset(",
     }
 
     for label, token in required.items():
         require(text, token, label)
 
-    print("PASS: Geofence QA controls are debug-only.")
+    print("PASS: Geofence QA controls are QA-build-only.")
 
 
 def verify_tests() -> None:

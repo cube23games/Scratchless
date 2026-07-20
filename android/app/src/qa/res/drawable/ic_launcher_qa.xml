@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@mipmap/ic_launcher" />
+
+    <item
+        android:width="28dp"
+        android:height="28dp"
+        android:gravity="bottom|end"
+        android:right="3dp"
+        android:bottom="3dp"
+        android:drawable="@drawable/qa_badge" />
+</layer-list>

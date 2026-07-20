@@ -257,6 +257,19 @@ class LivePlaceAlertService {
     return message;
   }
 
+  Future<String> resetQaCooldown(
+    RiskyPlace place,
+  ) async {
+    final label = _placeLabel(place);
+
+    await PlaceAlertCooldownService.instance.clear(place.id);
+    _recentEntryHits.remove(place.id);
+
+    final message = 'QA cooldown reset for $label';
+    _logEvent(message);
+    return message;
+  }
+
   List<RiskyPlace> enabledPremiumPlaces({
     required PremiumState premiumState,
     required List<RiskyPlace> riskyPlaces,
