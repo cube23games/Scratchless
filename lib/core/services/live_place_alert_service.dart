@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:tracelet/tracelet.dart' as tl;
 
 import '../models/premium_state.dart';
@@ -12,11 +14,13 @@ class CurrentPlaceCoordinate {
   final double latitude;
   final double longitude;
   final double accuracy;
+  final bool? isMock;
 
   const CurrentPlaceCoordinate({
     required this.latitude,
     required this.longitude,
     required this.accuracy,
+    required this.isMock,
   });
 }
 
@@ -91,7 +95,7 @@ class LivePlaceAlertService {
   static final LivePlaceAlertService instance = LivePlaceAlertService._();
 
   static const Duration _burstSuppressionWindow = Duration(seconds: 60);
-  static const int _maxRecentEvents = 5;
+  static const int _maxRecentEvents = 12;
 
   bool _initialized = false;
   bool _geofenceListenerRegistered = false;
@@ -182,7 +186,75 @@ class LivePlaceAlertService {
       latitude: location.coords.latitude,
       longitude: location.coords.longitude,
       accuracy: location.coords.accuracy,
+      isMock: _readLocationMockFlag(location),
     );
+  }
+
+  Future<String> evaluateCurrentLocationForQa(
+    RiskyPlace place,
+  ) async {
+    final latitude = place.latitude;
+    final longitude = place.longitude;
+    final label = _placeLabel(place);
+
+    if (latitude == null || longitude == null) {
+      final message =
+          'QA location check blocked: $label has no coordinates';
+      _logEvent(message);
+      return message;
+    }
+
+    final current = await captureCurrentPosition();
+    if (current == null) {
+      final message =
+          'QA location check blocked: Android location permission unavailable';
+      _logEvent(message);
+      return message;
+    }
+
+    final distance = _distanceMeters(
+      current.latitude,
+      current.longitude,
+      latitude,
+      longitude,
+    );
+
+    final inside = distance <= place.radiusMeters;
+    final mockLabel = current.isMock == null
+        ? 'unknown'
+        : current.isMock!
+            ? 'yes'
+            : 'no';
+
+    final message =
+        'QA location: ${_metersLabel(distance)} from $label; '
+        '${inside ? 'INSIDE' : 'OUTSIDE'} '
+        '${_metersLabel(place.radiusMeters.toDouble())} radius; '
+        'accuracy ${_metersLabel(current.accuracy)}; '
+        'mock $mockLabel';
+
+    _logEvent(message);
+    return message;
+  }
+
+  Future<String> sendQaTestNotification(
+    RiskyPlace place,
+  ) async {
+    final label = _placeLabel(place);
+
+    final shown =
+        await LocalNotificationService.instance.showLivePlaceAlert(
+      headline: 'QA risky-place alert',
+      body: 'Test alert for $label. Tap to open Live Alert Rescue.',
+      placeLabel: label,
+    );
+
+    final message = shown
+        ? 'QA notification sent for $label'
+        : 'QA notification blocked for $label';
+
+    _logEvent(message);
+    return message;
   }
 
   List<RiskyPlace> enabledPremiumPlaces({
@@ -322,11 +394,19 @@ class LivePlaceAlertService {
       return false;
     }
 
-    await LocalNotificationService.instance.showLivePlaceAlert(
+    final shown =
+        await LocalNotificationService.instance.showLivePlaceAlert(
       headline: _liveAlertHeadline(),
       body: _liveAlertBody(place),
       placeLabel: place.label,
     );
+
+    if (!shown) {
+      _logEvent(
+        'Notification blocked for ${_placeLabel(place)}',
+      );
+      return false;
+    }
 
     await PlaceAlertCooldownService.instance.markFired(
       place.id,
@@ -334,30 +414,51 @@ class LivePlaceAlertService {
     );
 
     _recentEntryHits[place.id] = current;
-    _logEvent('Live alert sent for ${place.label}');
+    _logEvent(
+      'Live alert sent for ${_placeLabel(place)}',
+    );
     return true;
   }
 
   Future<void> _handleGeofenceEvent(dynamic event) async {
     final identifier = _readEventIdentifier(event);
-    if (identifier == null) {
-      _logEvent('Ignored geofence event with no identifier');
-      return;
-    }
+    final rawAction = _readRawEventAction(event);
+    final action = normalizeGeofenceActionForQa(rawAction);
+    final eventType = event.runtimeType.toString();
 
-    final action = _readEventAction(event);
-    if (action != null && action.toUpperCase() != 'ENTER') {
-      _logEvent('Ignored non-entry event for $identifier');
+    if (identifier == null) {
+      _logEvent(
+        'Geofence event missing identifier; '
+        'action ${action ?? 'UNKNOWN'}; '
+        'raw ${_compactDebugValue(rawAction)}; '
+        'type $eventType',
+      );
       return;
     }
 
     final place = _monitoredPlacesById[identifier];
+    final label = place == null
+        ? identifier
+        : _placeLabel(place);
+
+    _logEvent(
+      'Geofence ${action ?? 'UNKNOWN'} for $label; '
+      'raw ${_compactDebugValue(rawAction)}; '
+      'type $eventType',
+    );
+
+    if (action != 'ENTER') {
+      return;
+    }
+
     if (place == null) {
       _logEvent('Entered unknown place $identifier');
       return;
     }
 
-    _logEvent('Entered ${place.label} radius');
+    _logEvent(
+      'Entered ${_placeLabel(place)} radius',
+    );
 
     await handlePlaceEntry(
       premiumState: _latestPremiumState,
@@ -527,42 +628,329 @@ class LivePlaceAlertService {
     }
   }
 
-  String? _readEventIdentifier(dynamic event) {
+  dynamic _attemptRead(dynamic Function() reader) {
     try {
-      final value = event.identifier;
-      if (value != null && value.toString().trim().isNotEmpty) {
-        return value.toString();
-      }
-    } catch (_) {}
+      return reader();
+    } catch (_) {
+      return null;
+    }
+  }
 
-    try {
-      final geofence = event.geofence;
-      final value = geofence.identifier;
-      if (value != null && value.toString().trim().isNotEmpty) {
-        return value.toString();
+  String _normalizedMapKey(Object? key) {
+    return key
+        .toString()
+        .replaceAll(RegExp(r'[^A-Za-z0-9]'), '')
+        .toLowerCase();
+  }
+
+  dynamic _readMapValue(
+    dynamic source,
+    List<String> keys,
+  ) {
+    if (source is! Map) {
+      return null;
+    }
+
+    final normalizedKeys = keys
+        .map(_normalizedMapKey)
+        .toSet();
+
+    for (final entry in source.entries) {
+      if (normalizedKeys.contains(
+        _normalizedMapKey(entry.key),
+      )) {
+        return entry.value;
       }
-    } catch (_) {}
+    }
 
     return null;
   }
 
-  String? _readEventAction(dynamic event) {
-    try {
-      final value = event.action;
-      if (value != null && value.toString().trim().isNotEmpty) {
-        return value.toString();
-      }
-    } catch (_) {}
+  List<dynamic> _eventContainers(dynamic event) {
+    final containers = <dynamic>[];
+    final pending = <dynamic>[event];
+    final seenObjects = <int>{};
 
-    try {
-      final geofence = event.geofence;
-      final value = geofence.action;
-      if (value != null && value.toString().trim().isNotEmpty) {
-        return value.toString();
+    while (pending.isNotEmpty && containers.length < 16) {
+      final current = pending.removeAt(0);
+
+      if (current == null) {
+        continue;
       }
-    } catch (_) {}
+
+      final identity = identityHashCode(current);
+      if (!seenObjects.add(identity)) {
+        continue;
+      }
+
+      containers.add(current);
+
+      final candidates = <dynamic>[
+        _attemptRead(() => current.geofence),
+        _attemptRead(() => current.eventPayload),
+        _attemptRead(() => current.event_payload),
+        _attemptRead(() => current.payload),
+        _attemptRead(() => current.data),
+        _attemptRead(() => current.event),
+        _readMapValue(
+          current,
+          const <String>[
+            'geofence',
+            'eventPayload',
+            'event_payload',
+            'payload',
+            'data',
+            'event',
+          ],
+        ),
+      ];
+
+      for (final candidate in candidates) {
+        if (candidate != null) {
+          pending.add(candidate);
+        }
+      }
+    }
+
+    return containers;
+  }
+
+  String? _nonEmptyString(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    final text = value.toString().trim();
+    return text.isEmpty ? null : text;
+  }
+
+  String? readGeofenceIdentifierForQa(
+    dynamic event,
+  ) {
+    return _readEventIdentifier(event);
+  }
+
+  String? readGeofenceActionForQa(
+    dynamic event,
+  ) {
+    return normalizeGeofenceActionForQa(
+      _readRawEventAction(event),
+    );
+  }
+
+  String? _readEventIdentifier(dynamic event) {
+    for (final container in _eventContainers(event)) {
+      final candidates = <dynamic>[
+        _attemptRead(() => container.identifier),
+        _attemptRead(() => container.id),
+        _readMapValue(
+          container,
+          const <String>[
+            'identifier',
+            'geofenceId',
+            'geofence_id',
+          ],
+        ),
+      ];
+
+      for (final candidate in candidates) {
+        final value = _nonEmptyString(candidate);
+        if (value != null) {
+          return value;
+        }
+      }
+    }
 
     return null;
+  }
+
+  dynamic _readRawEventAction(dynamic event) {
+    for (final container in _eventContainers(event)) {
+      final candidates = <dynamic>[
+        _attemptRead(() => container.action),
+        _attemptRead(() => container.transition),
+        _readMapValue(
+          container,
+          const <String>[
+            'action',
+            'transition',
+            'geofenceAction',
+            'geofence_action',
+          ],
+        ),
+      ];
+
+      for (final candidate in candidates) {
+        if (candidate != null &&
+            candidate.toString().trim().isNotEmpty) {
+          return candidate;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  String? normalizeGeofenceActionForQa(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is num) {
+      switch (value.toInt()) {
+        case 1:
+          return 'ENTER';
+        case 2:
+          return 'EXIT';
+        case 4:
+          return 'DWELL';
+      }
+    }
+
+    final normalized =
+        value.toString().trim().toUpperCase();
+
+    if (normalized == '1') {
+      return 'ENTER';
+    }
+    if (normalized == '2') {
+      return 'EXIT';
+    }
+    if (normalized == '4') {
+      return 'DWELL';
+    }
+
+    final tokens = normalized
+        .split(RegExp(r'[^A-Z]+'))
+        .where((token) => token.isNotEmpty)
+        .toSet();
+
+    if (tokens.contains('ENTER')) {
+      return 'ENTER';
+    }
+    if (tokens.contains('EXIT')) {
+      return 'EXIT';
+    }
+    if (tokens.contains('DWELL')) {
+      return 'DWELL';
+    }
+
+    return null;
+  }
+
+  bool? _readLocationMockFlag(dynamic location) {
+    final candidates = <dynamic>[
+      _attemptRead(() => location.isMock),
+      _attemptRead(() => location.mock),
+      _attemptRead(() => location.coords.isMock),
+      _attemptRead(() => location.coords.mock),
+      _readMapValue(
+        location,
+        const <String>['isMock', 'mock'],
+      ),
+      _readMapValue(
+        _readMapValue(
+          location,
+          const <String>['coords'],
+        ),
+        const <String>['isMock', 'mock'],
+      ),
+    ];
+
+    for (final candidate in candidates) {
+      if (candidate is bool) {
+        return candidate;
+      }
+
+      final text =
+          candidate?.toString().trim().toLowerCase();
+
+      if (text == 'true') {
+        return true;
+      }
+      if (text == 'false') {
+        return false;
+      }
+    }
+
+    return null;
+  }
+
+  String _compactDebugValue(dynamic value) {
+    if (value == null) {
+      return 'missing';
+    }
+
+    var text = value
+        .toString()
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+    if (text.length > 70) {
+      text = '${text.substring(0, 67)}...';
+    }
+
+    return text.isEmpty ? 'empty' : text;
+  }
+
+  String _placeLabel(RiskyPlace place) {
+    final label = place.label.trim();
+    return label.isEmpty
+        ? 'saved risky place'
+        : label;
+  }
+
+  double _distanceMeters(
+    double firstLatitude,
+    double firstLongitude,
+    double secondLatitude,
+    double secondLongitude,
+  ) {
+    const earthRadiusMeters = 6371000.0;
+
+    final firstLatRadians =
+        firstLatitude * math.pi / 180.0;
+    final secondLatRadians =
+        secondLatitude * math.pi / 180.0;
+    final latitudeDelta =
+        (secondLatitude - firstLatitude) *
+            math.pi /
+            180.0;
+    final longitudeDelta =
+        (secondLongitude - firstLongitude) *
+            math.pi /
+            180.0;
+
+    final rawHaversine =
+        math.sin(latitudeDelta / 2) *
+            math.sin(latitudeDelta / 2) +
+        math.cos(firstLatRadians) *
+            math.cos(secondLatRadians) *
+            math.sin(longitudeDelta / 2) *
+            math.sin(longitudeDelta / 2);
+
+    final haversine =
+        rawHaversine.clamp(0.0, 1.0).toDouble();
+
+    final angularDistance = 2 *
+        math.atan2(
+          math.sqrt(haversine),
+          math.sqrt(1 - haversine),
+        );
+
+    return earthRadiusMeters * angularDistance;
+  }
+
+  String _metersLabel(double meters) {
+    if (!meters.isFinite) {
+      return 'unknown distance';
+    }
+
+    if (meters >= 1000) {
+      return '${(meters / 1000).toStringAsFixed(2)} km';
+    }
+
+    return '${meters.round()} m';
   }
 
   void _pruneRecentEntryHits(DateTime now) {

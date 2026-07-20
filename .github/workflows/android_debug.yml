@@ -31,6 +31,12 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Verify pinned Tracelet
+        run: flutter pub deps --style=compact | grep -F "tracelet 1.8.13"
+
+      - name: Test geofence parser
+        run: flutter test test/live_place_alert_service_test.dart
+
       - name: Build debug APK
         env:
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}

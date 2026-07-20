@@ -256,7 +256,7 @@ class LocalNotificationService {
     );
   }
 
-  Future<void> showLivePlaceAlert({
+  Future<bool> showLivePlaceAlert({
     required String headline,
     required String body,
     required String placeLabel,
@@ -265,7 +265,7 @@ class LocalNotificationService {
 
     final granted = await _requestNotificationPermission();
     if (granted == false) {
-      return;
+      return false;
     }
 
     await _plugin.show(
@@ -273,8 +273,11 @@ class LocalNotificationService {
       headline,
       body,
       _liveAlertNotificationDetails(),
-      payload: '$_liveAlertPayloadPrefix${Uri.encodeComponent(placeLabel)}',
+      payload:
+          '$_liveAlertPayloadPrefix${Uri.encodeComponent(placeLabel)}',
     );
+
+    return true;
   }
 
   tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {

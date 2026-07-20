@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -44,6 +45,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
   late List<RiskyPlace> _places;
   String _selectedFilter = 'all';
   LiveAlertDebugState _debugState = LiveAlertDebugState.empty();
+  bool _qaActionRunning = false;
 
   @override
   void initState() {
@@ -980,6 +982,75 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
     return '$hour:$minute';
   }
 
+  Future<void> _runQaLocationCheck(
+    RiskyPlace place,
+  ) async {
+    if (_qaActionRunning) {
+      return;
+    }
+
+    setState(() {
+      _qaActionRunning = true;
+    });
+
+    String message;
+
+    try {
+      message = await LivePlaceAlertService.instance
+          .evaluateCurrentLocationForQa(place);
+    } catch (error) {
+      message = 'QA location check failed: $error';
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _qaActionRunning = false;
+      _debugState =
+          LivePlaceAlertService.instance.getDebugState();
+    });
+
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _runQaNotificationTest(
+    RiskyPlace place,
+  ) async {
+    if (_qaActionRunning) {
+      return;
+    }
+
+    setState(() {
+      _qaActionRunning = true;
+    });
+
+    String message;
+
+    try {
+      message = await LivePlaceAlertService.instance
+          .sendQaTestNotification(place);
+    } catch (error) {
+      message = 'QA notification test failed: $error';
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _qaActionRunning = false;
+      _debugState =
+          LivePlaceAlertService.instance.getDebugState();
+    });
+
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
 
   Future<void> _openAddPlace(BuildContext context) async {
     final beforePlaceCount = _places.length;
@@ -1589,6 +1660,68 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                       color: AppTheme.mutedText,
                       fontSize: 13,
                     ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (kDebugMode &&
+              readySpotlightPlace != null) ...[
+            const SizedBox(height: 12),
+            AppCard(
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Internal geofence QA',
+                    style: TextStyle(
+                      color: AppTheme.accent,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Test each link separately',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Debug build only. Confirm Android’s reported location, then test the notification and its tap-to-rescue route without waiting for a geofence transition.',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  AppButton(
+                    label: _qaActionRunning
+                        ? 'Checking current location...'
+                        : 'Evaluate current location',
+                    icon: Icons.my_location_rounded,
+                    onPressed: _qaActionRunning
+                        ? null
+                        : () => _runQaLocationCheck(
+                              readySpotlightPlace,
+                            ),
+                  ),
+                  const SizedBox(height: 8),
+                  AppButton(
+                    label: _qaActionRunning
+                        ? 'QA action running...'
+                        : 'Send test risky-place notification',
+                    icon:
+                        Icons.notifications_active_rounded,
+                    isPrimary: false,
+                    onPressed: _qaActionRunning
+                        ? null
+                        : () => _runQaNotificationTest(
+                              readySpotlightPlace,
+                            ),
                   ),
                 ],
               ),
