@@ -65,6 +65,8 @@ class PlaceAlertReentryService {
     final outsideFor = current.difference(exitedAt);
 
     if (outsideFor < minimumOutside) {
+      await clear(placeId);
+
       return PlaceAlertReentryResult(
         decision:
             PlaceAlertReentryDecision.waitingForStableOutside,

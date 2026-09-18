@@ -38,7 +38,7 @@ void main() {
       PlaceAlertReentryDecision.waitingForStableOutside,
     );
 
-    expect(await service.lastExitedAt('store'), base);
+    expect(await service.lastExitedAt('store'), isNull);
   });
 
   test('stable outside period re-arms once', () async {
