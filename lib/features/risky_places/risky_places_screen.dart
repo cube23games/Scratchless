@@ -1682,7 +1682,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Alerts fire on enter. If you were already inside the zone when it armed, step outside and come back in.',
+                    'Alerts fire on entry. After an alert, leave the zone before returning so ScratchLess can re-arm the place.',
                     style: TextStyle(
                       color: AppTheme.mutedText,
                       fontSize: 13,
@@ -1690,7 +1690,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    'If nothing happens, make sure you fully left the radius first. Cooldown can also hold repeat alerts for a while.',
+                    'A confirmed exit followed by at least 90 seconds outside re-arms the place. Faster boundary changes are treated as GPS jitter.',
                     style: TextStyle(
                       color: AppTheme.mutedText,
                       fontSize: 13,

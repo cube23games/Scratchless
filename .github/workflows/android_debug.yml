@@ -40,6 +40,12 @@ jobs:
       - name: Test geofence parser
         run: flutter test test/live_place_alert_service_test.dart
 
+      - name: Test exit-aware geofence re-entry
+        run: flutter test test/place_alert_reentry_service_test.dart
+
+      - name: Verify GEOFENCE2 source contract
+        run: python tools/verify_sl77a_geofence2.py --ci
+
       - name: Test QA build configuration
         run: >
           flutter test

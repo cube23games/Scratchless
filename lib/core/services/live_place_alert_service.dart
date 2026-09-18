@@ -8,6 +8,7 @@ import 'feature_gate_service.dart';
 import 'local_notification_service.dart';
 import 'place_alert_cooldown_service.dart';
 import 'place_alert_policy_service.dart';
+import 'place_alert_reentry_service.dart';
 import 'risky_time_service.dart';
 
 class CurrentPlaceCoordinate {
@@ -95,6 +96,8 @@ class LivePlaceAlertService {
   static final LivePlaceAlertService instance = LivePlaceAlertService._();
 
   static const Duration _burstSuppressionWindow = Duration(seconds: 60);
+  static const Duration _minimumOutsideBeforeRearm =
+      Duration(seconds: 90);
   static const int _maxRecentEvents = 12;
 
   bool _initialized = false;
@@ -263,6 +266,7 @@ class LivePlaceAlertService {
     final label = _placeLabel(place);
 
     await PlaceAlertCooldownService.instance.clear(place.id);
+    await PlaceAlertReentryService.instance.clear(place.id);
     _recentEntryHits.remove(place.id);
 
     final message = 'QA cooldown reset for $label';
@@ -330,7 +334,7 @@ class LivePlaceAlertService {
           longitude: place.longitude!,
           radius: place.radiusMeters.toDouble(),
           notifyOnEntry: true,
-          notifyOnExit: false,
+          notifyOnExit: true,
         ),
       );
     }
@@ -362,6 +366,7 @@ class LivePlaceAlertService {
     required RiskyPlace place,
     required RiskyTimeInsight riskyTimeInsight,
     DateTime? now,
+    bool bypassLongCooldown = false,
   }) async {
     final current = now ?? DateTime.now();
 
@@ -395,16 +400,19 @@ class LivePlaceAlertService {
       return false;
     }
 
-    final suppressed = await PlaceAlertCooldownService.instance.shouldSuppress(
-      placeId: place.id,
-      cooldownMinutes: decision.cooldownMinutes,
-      now: current,
-    );
+    if (!bypassLongCooldown) {
+      final suppressed =
+          await PlaceAlertCooldownService.instance.shouldSuppress(
+        placeId: place.id,
+        cooldownMinutes: decision.cooldownMinutes,
+        now: current,
+      );
 
-    if (suppressed) {
-      _recentEntryHits[place.id] = current;
-      _logEvent('Held by cooldown for ${place.label}');
-      return false;
+      if (suppressed) {
+        _recentEntryHits[place.id] = current;
+        _logEvent('Held by cooldown for ${place.label}');
+        return false;
+      }
     }
 
     final shown =
@@ -438,6 +446,7 @@ class LivePlaceAlertService {
     final rawAction = _readRawEventAction(event);
     final action = normalizeGeofenceActionForQa(rawAction);
     final eventType = event.runtimeType.toString();
+    final current = DateTime.now();
 
     if (identifier == null) {
       _logEvent(
@@ -460,12 +469,27 @@ class LivePlaceAlertService {
       'type $eventType',
     );
 
-    if (action != 'ENTER') {
+    if (place == null) {
+      _logEvent('Geofence event for unknown place $identifier');
       return;
     }
 
-    if (place == null) {
-      _logEvent('Entered unknown place $identifier');
+    if (action == 'EXIT') {
+      await PlaceAlertReentryService.instance.markExited(
+        place.id,
+        now: current,
+      );
+
+      _recentEntryHits.remove(place.id);
+
+      _logEvent(
+        'Exited ${_placeLabel(place)} radius; '
+        're-arm pending for 90 sec',
+      );
+      return;
+    }
+
+    if (action != 'ENTER') {
       return;
     }
 
@@ -473,10 +497,47 @@ class LivePlaceAlertService {
       'Entered ${_placeLabel(place)} radius',
     );
 
+    final reentry =
+        await PlaceAlertReentryService.instance.evaluateEntry(
+      placeId: place.id,
+      minimumOutside: _minimumOutsideBeforeRearm,
+      now: current,
+    );
+
+    if (reentry.decision ==
+        PlaceAlertReentryDecision.waitingForStableOutside) {
+      final remaining =
+          _minimumOutsideBeforeRearm - reentry.outsideFor;
+
+      final seconds = remaining.inSeconds < 1
+          ? 1
+          : remaining.inSeconds;
+
+      _recentEntryHits[place.id] = current;
+
+      _logEvent(
+        'Re-entry too soon for ${_placeLabel(place)}; '
+        'outside ${reentry.outsideFor.inSeconds}s; '
+        'wait ${seconds}s',
+      );
+      return;
+    }
+
+    final confirmedReentry =
+        reentry.decision == PlaceAlertReentryDecision.rearmed;
+
+    if (confirmedReentry) {
+      _logEvent(
+        'Re-armed ${_placeLabel(place)} after confirmed exit',
+      );
+    }
+
     await handlePlaceEntry(
       premiumState: _latestPremiumState,
       place: place,
       riskyTimeInsight: _latestRiskyTimeInsight,
+      now: current,
+      bypassLongCooldown: confirmedReentry,
     );
   }
 
