@@ -49,6 +49,9 @@ jobs:
       - name: Verify GEOFENCE2B preserve-state contract
         run: python tools/verify_sl77a_geofence2b.py --ci
 
+      - name: Verify GEOFENCE2C approach-scope contract
+        run: python tools/verify_sl77a_geofence2c.py --ci
+
       - name: Test QA build configuration
         run: >
           flutter test

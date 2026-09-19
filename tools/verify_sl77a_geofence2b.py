@@ -55,7 +55,6 @@ tests = read("test/live_place_alert_service_test.dart")
 workflow = read(".github/workflows/android_debug.yml")
 
 for token, label in {
-    "geofenceInitialTriggerEntry: false": "initial ENTER suppression",
     "final existingGeofences = await tl.Tracelet.getGeofences()": "existing-fence read",
     "await tl.Tracelet.removeGeofence(existing.identifier)": "selective stale-fence removal",
     "sameGeofenceDefinitionForQa(existing, place)": "unchanged-fence comparison",
@@ -91,5 +90,5 @@ print("PASS: unchanged geofences survive ordinary sync.")
 print("PASS: stale geofences are removed individually.")
 print("PASS: changed/new geofences are upserted by identifier.")
 print("PASS: repeated sync does not restart geofence mode.")
-print("PASS: synthetic initial ENTER is disabled.")
+print("PASS: preserve-state sync avoids refresh-driven restart ENTERs.")
 print("SL-77A-GEOFENCE2B VERIFICATION PASSED")

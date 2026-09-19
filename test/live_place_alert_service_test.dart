@@ -184,4 +184,11 @@ void main() {
     });
   });
 
+  group('geofence approach policy', () {
+    test('keeps monitoring active across a multi-kilometer approach', () {
+      expect(service.geofenceProximityRadiusMetersForQa, 5000);
+      expect(service.geofenceInitialTriggerEntryForQa, isTrue);
+    });
+  });
+
 }

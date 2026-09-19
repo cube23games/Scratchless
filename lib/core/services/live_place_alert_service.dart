@@ -98,6 +98,8 @@ class LivePlaceAlertService {
   static const Duration _burstSuppressionWindow = Duration(seconds: 60);
   static const Duration _minimumOutsideBeforeRearm =
       Duration(seconds: 90);
+  static const int _geofenceProximityRadiusMeters = 5000;
+  static const bool _geofenceInitialTriggerEntry = true;
   static const int _maxRecentEvents = 12;
 
   bool _initialized = false;
@@ -122,7 +124,8 @@ class LivePlaceAlertService {
             distanceFilter: 25.0,
           ),
           geofence: const tl.GeofenceConfig(
-            geofenceInitialTriggerEntry: false,
+            geofenceProximityRadius: _geofenceProximityRadiusMeters,
+            geofenceInitialTriggerEntry: _geofenceInitialTriggerEntry,
           ),
           app: tl.AppConfig(
             stopOnTerminate: false,
@@ -276,6 +279,12 @@ class LivePlaceAlertService {
     _logEvent(message);
     return message;
   }
+
+  int get geofenceProximityRadiusMetersForQa =>
+      _geofenceProximityRadiusMeters;
+
+  bool get geofenceInitialTriggerEntryForQa =>
+      _geofenceInitialTriggerEntry;
 
   tl.Geofence _geofenceForPlace(RiskyPlace place) {
     return tl.Geofence(
