@@ -1,4 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tracelet/tracelet.dart' as tl;
+
+import 'package:scratchless/core/models/risky_place.dart';
 import 'package:scratchless/core/services/live_place_alert_service.dart';
 
 void main() {
@@ -123,4 +126,62 @@ void main() {
       );
     });
   });
+  group('geofence definition preservation', () {
+    const place = RiskyPlace(
+      id: 'bakery',
+      label: 'Bakery',
+      note: '',
+      isTopRisk: true,
+      radiusMeters: 300,
+      locationAlertsEnabled: true,
+      latitude: 35.123456,
+      longitude: -80.654321,
+    );
+
+    test('unchanged fence is preserved', () {
+      const existing = tl.Geofence(
+        identifier: 'bakery',
+        latitude: 35.123456,
+        longitude: -80.654321,
+        radius: 300,
+        notifyOnEntry: true,
+        notifyOnExit: true,
+      );
+
+      expect(
+        service.sameGeofenceDefinitionForQa(existing, place),
+        isTrue,
+      );
+    });
+
+    test('changed or entry-only fence must be upserted', () {
+      const changedRadius = tl.Geofence(
+        identifier: 'bakery',
+        latitude: 35.123456,
+        longitude: -80.654321,
+        radius: 250,
+        notifyOnEntry: true,
+        notifyOnExit: true,
+      );
+
+      const missingExit = tl.Geofence(
+        identifier: 'bakery',
+        latitude: 35.123456,
+        longitude: -80.654321,
+        radius: 300,
+        notifyOnEntry: true,
+        notifyOnExit: false,
+      );
+
+      expect(
+        service.sameGeofenceDefinitionForQa(changedRadius, place),
+        isFalse,
+      );
+      expect(
+        service.sameGeofenceDefinitionForQa(missingExit, place),
+        isFalse,
+      );
+    });
+  });
+
 }

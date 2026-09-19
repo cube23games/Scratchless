@@ -121,6 +121,9 @@ class LivePlaceAlertService {
             desiredAccuracy: tl.DesiredAccuracy.high,
             distanceFilter: 25.0,
           ),
+          geofence: const tl.GeofenceConfig(
+            geofenceInitialTriggerEntry: false,
+          ),
           app: tl.AppConfig(
             stopOnTerminate: false,
             startOnBoot: true,
@@ -274,6 +277,37 @@ class LivePlaceAlertService {
     return message;
   }
 
+  tl.Geofence _geofenceForPlace(RiskyPlace place) {
+    return tl.Geofence(
+      identifier: place.id,
+      latitude: place.latitude!,
+      longitude: place.longitude!,
+      radius: place.radiusMeters.toDouble(),
+      notifyOnEntry: true,
+      notifyOnExit: true,
+    );
+  }
+
+  bool sameGeofenceDefinitionForQa(
+    tl.Geofence existing,
+    RiskyPlace place,
+  ) {
+    final latitude = place.latitude;
+    final longitude = place.longitude;
+
+    if (latitude == null || longitude == null) {
+      return false;
+    }
+
+    return existing.identifier == place.id &&
+        (existing.latitude - latitude).abs() < 0.0000001 &&
+        (existing.longitude - longitude).abs() < 0.0000001 &&
+        (existing.radius - place.radiusMeters.toDouble()).abs() < 0.5 &&
+        existing.notifyOnEntry &&
+        existing.notifyOnExit &&
+        !existing.notifyOnDwell;
+  }
+
   List<RiskyPlace> enabledPremiumPlaces({
     required PremiumState premiumState,
     required List<RiskyPlace> riskyPlaces,
@@ -303,9 +337,15 @@ class LivePlaceAlertService {
     _latestRiskyTimeInsight = riskyTimeInsight;
     _latestRiskyPlaces = List<RiskyPlace>.from(riskyPlaces);
 
+    final existingGeofences = await tl.Tracelet.getGeofences();
+
     if (access != 'fullBackground') {
       _monitoredPlacesById = <String, RiskyPlace>{};
-      await tl.Tracelet.removeGeofences();
+
+      for (final existing in existingGeofences) {
+        await tl.Tracelet.removeGeofence(existing.identifier);
+      }
+
       _logEvent('Permission sync: ${_permissionLabel(access)}');
       return;
     }
@@ -319,31 +359,70 @@ class LivePlaceAlertService {
       for (final place in places) place.id: place,
     };
 
-    await tl.Tracelet.removeGeofences();
+    final desiredIds = places.map((place) => place.id).toSet();
+    final existingById = {
+      for (final existing in existingGeofences)
+        existing.identifier: existing,
+    };
+
+    var removed = 0;
+    var upserted = 0;
+    var preserved = 0;
+
+    for (final existing in existingGeofences) {
+      if (!desiredIds.contains(existing.identifier)) {
+        await tl.Tracelet.removeGeofence(existing.identifier);
+        removed++;
+      }
+    }
+
+    for (final place in places) {
+      final existing = existingById[place.id];
+
+      if (existing != null &&
+          sameGeofenceDefinitionForQa(existing, place)) {
+        preserved++;
+        continue;
+      }
+
+      await tl.Tracelet.addGeofence(
+        _geofenceForPlace(place),
+      );
+      upserted++;
+    }
 
     if (places.isEmpty) {
       _logEvent('No places are armed yet');
       return;
     }
 
-    for (final place in places) {
-      await tl.Tracelet.addGeofence(
-        tl.Geofence(
-          identifier: place.id,
-          latitude: place.latitude!,
-          longitude: place.longitude!,
-          radius: place.radiusMeters.toDouble(),
-          notifyOnEntry: true,
-          notifyOnExit: true,
-        ),
-      );
+    final state = await tl.Tracelet.getState();
+    final alreadyGeofencing =
+        state.enabled &&
+        state.trackingMode == tl.TrackingMode.geofences;
+
+    if (!alreadyGeofencing) {
+      await tl.Tracelet.startGeofences();
+
+      if (places.length == 1) {
+        _logEvent(
+          'Geofence monitoring started for ${places.first.label}',
+        );
+      } else {
+        _logEvent(
+          'Geofence monitoring started for ${places.length} places',
+        );
+      }
+      return;
     }
 
-    await tl.Tracelet.startGeofences();
-    if (places.length == 1) {
-      _logEvent('Geofence armed for ${places.first.label}');
-    } else {
-      _logEvent('Geofences armed for ${places.length} places');
+    if (removed > 0 || upserted > 0) {
+      _logEvent(
+        'Geofence sync updated: '
+        '$preserved preserved, '
+        '$upserted upserted, '
+        '$removed removed',
+      );
     }
   }
 
