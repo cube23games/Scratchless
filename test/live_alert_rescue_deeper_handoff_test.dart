@@ -21,7 +21,11 @@ void main() {
 
       expect(find.text('Need another layer?'), findsNothing);
 
-      await tester.ensureVisible(find.text('Read my reasons'));
+      await tester.scrollUntilVisible(
+        find.text('Read my reasons'),
+        200,
+      );
+      await tester.pump();
       await tester.tap(find.text('Read my reasons'));
       await tester.pumpAndSettle();
 
@@ -45,8 +49,23 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Get help now'), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text('Call 1-800-MY-RESET'),
+        200,
+      );
       expect(find.text('Call 1-800-MY-RESET'), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text('Text 800GAM'),
+        200,
+      );
       expect(find.text('Text 800GAM'), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text('Open live chat'),
+        200,
+      );
       expect(find.text('Open live chat'), findsOneWidget);
     },
   );
