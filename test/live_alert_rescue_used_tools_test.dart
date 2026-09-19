@@ -70,6 +70,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Support contacted'), findsOneWidget);
+
+      // Let the real 10-minute rescue timer finish inside fake test time.
+      await tester.pump(const Duration(minutes: 11));
+      await tester.pump();
     },
   );
 }
