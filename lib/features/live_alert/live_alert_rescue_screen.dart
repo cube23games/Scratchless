@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/app_theme.dart';
+import '../help/help_screen.dart';
 import '../../core/models/accountability_partner.dart';
 import '../../core/models/stop_reason.dart';
 import '../../core/models/urge_session_log.dart';
@@ -521,6 +522,14 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
     );
   }
 
+  void _openDeeperHelp() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const HelpScreen(),
+      ),
+    );
+  }
+
   void _openRealLogSheet() {
     showModalBottomSheet<void>(
       context: context,
@@ -822,6 +831,45 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
                     _usedToolLine('Reasons reviewed'),
                   if (_usedSupport)
                     _usedToolLine('Support contacted'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Need another layer?',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Hand this moment off to live gambling support.',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'If the urge still feels hard to manage, call, text, or chat with someone who can stay with you through it.',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  AppButton(
+                    label: 'Open live support options',
+                    icon: Icons.support_agent_rounded,
+                    isPrimary: false,
+                    onPressed: _openDeeperHelp,
+                  ),
                 ],
               ),
             ),

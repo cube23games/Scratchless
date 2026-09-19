@@ -78,6 +78,12 @@ jobs:
       - name: Verify SL-77C used-tools contract
         run: python tools/verify_sl77c.py --ci
 
+      - name: Test SL-77D deeper handoff
+        run: flutter test test/live_alert_rescue_deeper_handoff_test.dart
+
+      - name: Verify SL-77D deeper-handoff contract
+        run: python tools/verify_sl77d.py --ci
+
       - name: Build QA release APK
         env:
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
