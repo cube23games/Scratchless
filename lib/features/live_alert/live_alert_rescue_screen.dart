@@ -531,6 +531,7 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
                       usedCopingStrategies: _usedWait || _usedReasons,
                       usedNearMissEducation: false,
                       usedAccountability: _usedSupport,
+                      outcome: UrgeSessionOutcome.resolvedWithoutPurchase,
                     ),
                   );
 
@@ -559,6 +560,7 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
                       usedCopingStrategies: _usedWait || _usedReasons,
                       usedNearMissEducation: false,
                       usedAccountability: _usedSupport,
+                      outcome: UrgeSessionOutcome.stillDeciding,
                     ),
                   );
 

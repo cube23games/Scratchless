@@ -41,7 +41,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
   double _averageSpend = 10;
   String _goal = 'Spend less';
 
-  int _urgesDefeated = 0;
+  int _legacyUrgeWinsBaseline = 0;
   List<PurchaseLog> _logs = <PurchaseLog>[];
   List<UrgeSessionLog> _urgeSessions = <UrgeSessionLog>[];
   ReminderSettings _reminderSettings = ReminderSettings.defaults();
@@ -64,6 +64,13 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
 
   double get _monthlySpendEstimate {
     return _frequencyPerWeek * _averageSpend * 4.33;
+  }
+
+  int get _urgesDefeated {
+    final explicitWins =
+        _urgeSessions.where((session) => session.countsAsUrgeWin).length;
+
+    return _legacyUrgeWinsBaseline + explicitWins;
   }
 
   double get _estimatedCashKept {
@@ -144,7 +151,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
       _frequencyPerWeek = stored.frequencyPerWeek;
       _averageSpend = stored.averageSpend;
       _goal = stored.goal;
-      _urgesDefeated = stored.urgesDefeated;
+      _legacyUrgeWinsBaseline = stored.legacyUrgeWinsBaseline;
       _logs = stored.logs;
       _reminderSettings = stored.reminderSettings;
       _urgeSessions = stored.urgeSessions;
@@ -171,6 +178,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
         averageSpend: _averageSpend,
         goal: _goal,
         urgesDefeated: _urgesDefeated,
+        legacyUrgeWinsBaseline: _legacyUrgeWinsBaseline,
         logs: _logs,
         reminderSettings: _reminderSettings,
         urgeSessions: _urgeSessions,
@@ -268,7 +276,6 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
 
   void _completeUrgeSession() {
     setState(() {
-      _urgesDefeated += 1;
       _urgeSessions = <UrgeSessionLog>[
         UrgeSessionLog(
           startedAt: DateTime.now(),
@@ -278,6 +285,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
           usedCopingStrategies: false,
           usedNearMissEducation: false,
           usedAccountability: false,
+          outcome: UrgeSessionOutcome.resolvedWithoutPurchase,
         ),
         ..._urgeSessions,
       ];
@@ -288,7 +296,6 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
 
   void _completeDetailedUrgeSession(UrgeSessionLog session) {
     setState(() {
-      _urgesDefeated += 1;
       _urgeSessions = <UrgeSessionLog>[
         session,
         ..._urgeSessions,
@@ -649,7 +656,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
                     premiumState: _premiumState,
                     hasSeenSuccessPremiumPrompt:
                         _hasSeenSuccessPremiumPrompt,
-                    urgeSessionsCount: _urgeSessions.length,
+                    urgeWinsCount: _urgesDefeated,
                   ),
                   onAcknowledgeSuccessPremiumPrompt:
                       _acknowledgeSuccessPremiumPrompt,

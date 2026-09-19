@@ -20,6 +20,7 @@ class StoredAppState {
   final double averageSpend;
   final String goal;
   final int urgesDefeated;
+  final int legacyUrgeWinsBaseline;
   final List<PurchaseLog> logs;
   final ReminderSettings reminderSettings;
   final List<UrgeSessionLog> urgeSessions;
@@ -39,6 +40,7 @@ class StoredAppState {
     required this.averageSpend,
     required this.goal,
     required this.urgesDefeated,
+    required this.legacyUrgeWinsBaseline,
     required this.logs,
     required this.reminderSettings,
     required this.urgeSessions,
@@ -60,6 +62,7 @@ class StoredAppState {
       averageSpend: 10,
       goal: 'Spend less',
       urgesDefeated: 0,
+      legacyUrgeWinsBaseline: 0,
       logs: const <PurchaseLog>[],
       reminderSettings: ReminderSettings.defaults(),
       urgeSessions: const <UrgeSessionLog>[],
@@ -82,6 +85,8 @@ class AppStorage {
   static const String _averageSpendKey = 'average_spend';
   static const String _goalKey = 'goal';
   static const String _urgesDefeatedKey = 'urges_defeated';
+  static const String _legacyUrgeWinsBaselineKey =
+      'legacy_urge_wins_baseline';
   static const String _logsKey = 'purchase_logs';
   static const String _urgeSessionsKey = 'urge_sessions';
   static const String _weeklyReflectionArchiveKey = 'weekly_reflection_archive';
@@ -124,6 +129,23 @@ class AppStorage {
         return UrgeSessionLog.fromJson(decoded);
       }).toList()
         ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
+
+      final storedUrgesDefeated =
+          prefs.getInt(_urgesDefeatedKey) ?? 0;
+      var legacyUrgeWinsBaseline =
+          prefs.getInt(_legacyUrgeWinsBaselineKey);
+
+      if (legacyUrgeWinsBaseline == null) {
+        final unrepresentedLegacyWins =
+            storedUrgesDefeated - rawUrgeSessions.length;
+        legacyUrgeWinsBaseline =
+            unrepresentedLegacyWins > 0 ? unrepresentedLegacyWins : 0;
+
+        await prefs.setInt(
+          _legacyUrgeWinsBaselineKey,
+          legacyUrgeWinsBaseline,
+        );
+      }
 
       final rawArchive =
           prefs.getStringList(_weeklyReflectionArchiveKey) ?? <String>[];
@@ -177,7 +199,8 @@ class AppStorage {
         frequencyPerWeek: prefs.getInt(_frequencyPerWeekKey) ?? 3,
         averageSpend: prefs.getDouble(_averageSpendKey) ?? 10,
         goal: prefs.getString(_goalKey) ?? 'Spend less',
-        urgesDefeated: prefs.getInt(_urgesDefeatedKey) ?? 0,
+        urgesDefeated: storedUrgesDefeated,
+        legacyUrgeWinsBaseline: legacyUrgeWinsBaseline,
         logs: logs,
         reminderSettings: ReminderSettings(
           dailyCheckInEnabled:
@@ -228,6 +251,10 @@ class AppStorage {
     await prefs.setDouble(_averageSpendKey, state.averageSpend);
     await prefs.setString(_goalKey, state.goal);
     await prefs.setInt(_urgesDefeatedKey, state.urgesDefeated);
+    await prefs.setInt(
+      _legacyUrgeWinsBaselineKey,
+      state.legacyUrgeWinsBaseline,
+    );
 
     final encodedLogs =
         state.logs.map((log) => jsonEncode(log.toJson())).toList();

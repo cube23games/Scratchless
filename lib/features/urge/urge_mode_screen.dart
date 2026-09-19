@@ -173,6 +173,7 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
         usedCopingStrategies: _usedCopingStrategies,
         usedNearMissEducation: _usedNearMissEducation,
         usedAccountability: _usedAccountability,
+        outcome: UrgeSessionOutcome.resolvedWithoutPurchase,
       ),
     );
 

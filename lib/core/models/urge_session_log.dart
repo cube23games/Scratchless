@@ -1,3 +1,9 @@
+enum UrgeSessionOutcome {
+  resolvedWithoutPurchase,
+  stillDeciding,
+  unknownLegacy,
+}
+
 class UrgeSessionLog {
   final DateTime startedAt;
   final DateTime completedAt;
@@ -6,6 +12,7 @@ class UrgeSessionLog {
   final bool usedCopingStrategies;
   final bool usedNearMissEducation;
   final bool usedAccountability;
+  final UrgeSessionOutcome outcome;
 
   const UrgeSessionLog({
     required this.startedAt,
@@ -15,7 +22,24 @@ class UrgeSessionLog {
     required this.usedCopingStrategies,
     required this.usedNearMissEducation,
     required this.usedAccountability,
+    required this.outcome,
   });
+
+  bool get countsAsUrgeWin =>
+      outcome == UrgeSessionOutcome.resolvedWithoutPurchase;
+
+  bool get countsTowardCashKept => countsAsUrgeWin;
+
+  String get _outcomeStorageValue {
+    switch (outcome) {
+      case UrgeSessionOutcome.resolvedWithoutPurchase:
+        return 'resolved_without_purchase';
+      case UrgeSessionOutcome.stillDeciding:
+        return 'still_deciding';
+      case UrgeSessionOutcome.unknownLegacy:
+        return 'unknown_legacy';
+    }
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -26,33 +50,59 @@ class UrgeSessionLog {
       'usedCopingStrategies': usedCopingStrategies,
       'usedNearMissEducation': usedNearMissEducation,
       'usedAccountability': usedAccountability,
+      'outcome': _outcomeStorageValue,
     };
   }
 
   factory UrgeSessionLog.fromJson(Map<String, dynamic> json) {
     final startedAtRaw = json['startedAt']?.toString();
     final completedAtRaw = json['completedAt']?.toString();
-
-    final parsedStartedAt =
-        startedAtRaw == null ? null : DateTime.tryParse(startedAtRaw);
-    final parsedCompletedAt =
-        completedAtRaw == null ? null : DateTime.tryParse(completedAtRaw);
-
+    final parsedStartedAt = startedAtRaw == null ? null : DateTime.tryParse(startedAtRaw);
+    final parsedCompletedAt = completedAtRaw == null ? null : DateTime.tryParse(completedAtRaw);
     final fallbackCompletedAt = parsedCompletedAt ?? DateTime.now();
+    final selectedScriptId = json['selectedScriptId']?.toString() ?? 'default';
 
     return UrgeSessionLog(
       startedAt: parsedStartedAt ?? fallbackCompletedAt,
       completedAt: fallbackCompletedAt,
-      selectedScriptId:
-          json['selectedScriptId']?.toString() ?? 'default',
-      openedFullUrgeScript:
-          json['openedFullUrgeScript'] as bool? ?? false,
-      usedCopingStrategies:
-          json['usedCopingStrategies'] as bool? ?? false,
-      usedNearMissEducation:
-          json['usedNearMissEducation'] as bool? ?? false,
-      usedAccountability:
-          json['usedAccountability'] as bool? ?? false,
+      selectedScriptId: selectedScriptId,
+      openedFullUrgeScript: json['openedFullUrgeScript'] as bool? ?? false,
+      usedCopingStrategies: json['usedCopingStrategies'] as bool? ?? false,
+      usedNearMissEducation: json['usedNearMissEducation'] as bool? ?? false,
+      usedAccountability: json['usedAccountability'] as bool? ?? false,
+      outcome: _parseOutcome(json['outcome']?.toString(), selectedScriptId: selectedScriptId),
     );
+  }
+
+  static UrgeSessionOutcome _parseOutcome(String? raw, {required String selectedScriptId}) {
+    switch (raw) {
+      case 'resolved_without_purchase':
+        return UrgeSessionOutcome.resolvedWithoutPurchase;
+      case 'still_deciding':
+        return UrgeSessionOutcome.stillDeciding;
+      case 'unknown_legacy':
+        return UrgeSessionOutcome.unknownLegacy;
+    }
+
+    if (selectedScriptId == 'live_alert_rescue_deciding') {
+      return UrgeSessionOutcome.stillDeciding;
+    }
+
+    const knownLegacyWins = <String>{
+      'pre_store_mode',
+      'live_alert_rescue_paused',
+      'after_paycheck',
+      'saw_display',
+      'won_recently',
+      'passing_store',
+      'only_one',
+      'already_in_store',
+    };
+
+    if (knownLegacyWins.contains(selectedScriptId)) {
+      return UrgeSessionOutcome.resolvedWithoutPurchase;
+    }
+
+    return UrgeSessionOutcome.unknownLegacy;
   }
 }

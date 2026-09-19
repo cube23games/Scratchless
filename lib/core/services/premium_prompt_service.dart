@@ -14,7 +14,7 @@ class PremiumPromptService {
     required PremiumPromptType type,
     required PremiumState premiumState,
     required bool hasSeenSuccessPremiumPrompt,
-    required int urgeSessionsCount,
+    required int urgeWinsCount,
     bool isEmergencyFlow = false,
     bool isPurchaseMoment = false,
   }) {
@@ -32,7 +32,7 @@ class PremiumPromptService {
 
     switch (type) {
       case PremiumPromptType.firstUrgeWin:
-        return !hasSeenSuccessPremiumPrompt && urgeSessionsCount == 0;
+        return !hasSeenSuccessPremiumPrompt && urgeWinsCount == 0;
       case PremiumPromptType.onboardingPaywall:
       case PremiumPromptType.firstWeeklyReflection:
       case PremiumPromptType.firstStreakMilestone:

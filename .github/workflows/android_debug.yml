@@ -66,6 +66,12 @@ jobs:
           --dart-define=EXPECTED_SCRATCHLESS_BUILD=store
           test/app_build_config_test.dart
 
+      - name: Test honest urge outcomes and metrics
+        run: flutter test test/urge_outcome_semantics_test.dart
+
+      - name: Verify SL-77B outcome contract
+        run: python tools/verify_sl77b.py --ci
+
       - name: Build QA release APK
         env:
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}

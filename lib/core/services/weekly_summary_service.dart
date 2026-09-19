@@ -87,8 +87,10 @@ class WeeklySummaryService {
     final purchasesThisWeek = currentPurchases.length;
     final purchasesPreviousWeek = previousPurchases.length;
 
-    final urgeWinsThisWeek = currentUrges.length;
-    final urgeWinsPreviousWeek = previousUrges.length;
+    final urgeWinsThisWeek =
+        currentUrges.where((session) => session.countsAsUrgeWin).length;
+    final urgeWinsPreviousWeek =
+        previousUrges.where((session) => session.countsAsUrgeWin).length;
 
     final cashKeptThisWeek = urgeWinsThisWeek * averageSpend;
     final cashKeptPreviousWeek = urgeWinsPreviousWeek * averageSpend;
