@@ -49,7 +49,7 @@ void main() {
       expect(find.text("You've already used"), findsOneWidget);
       expect(find.text('10-minute pause started'), findsOneWidget);
 
-      await tester.ensureVisible(find.text('Read my reasons'));
+      await tester.scrollUntilVisible(find.text('Read my reasons'), -400);
       await tester.tap(find.text('Read my reasons'));
       await tester.pumpAndSettle();
 
@@ -60,15 +60,17 @@ void main() {
       ).pop();
       await tester.pumpAndSettle();
 
+      await tester.scrollUntilVisible(find.text('Reasons reviewed'), 400);
       expect(find.text('Reasons reviewed'), findsOneWidget);
 
-      await tester.ensureVisible(find.text('Message support'));
+      await tester.scrollUntilVisible(find.text('Message support'), -400);
       await tester.tap(find.text('Message support'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Copy support message'));
       await tester.pumpAndSettle();
 
+      await tester.scrollUntilVisible(find.text('Support contacted'), 400);
       expect(find.text('Support contacted'), findsOneWidget);
 
       // Let the real 10-minute rescue timer finish inside fake test time.
