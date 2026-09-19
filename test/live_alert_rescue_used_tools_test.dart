@@ -40,6 +40,11 @@ void main() {
 
       await tester.tap(find.text('Give me 10 minutes'));
       await tester.pump();
+      await tester.scrollUntilVisible(
+        find.text("You've already used"),
+        400,
+      );
+      await tester.pump();
 
       expect(find.text("You've already used"), findsOneWidget);
       expect(find.text('10-minute pause started'), findsOneWidget);
