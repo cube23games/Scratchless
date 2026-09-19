@@ -37,6 +37,9 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
   bool _usedSupport = false;
   bool _usedWait = false;
   bool _leavingConfirmed = false;
+
+  bool get _hasUsedRescueTools =>
+      _usedWait || _usedReasons || _usedSupport;
   String? _actionFeedbackTitle;
   String? _actionFeedbackBody;
 
@@ -493,6 +496,31 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
     );
   }
 
+  Widget _usedToolLine(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(
+            Icons.check_circle_rounded,
+            size: 18,
+            color: AppTheme.accent,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _openRealLogSheet() {
     showModalBottomSheet<void>(
       context: context,
@@ -765,6 +793,39 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
               ],
             ),
           ),
+          if (_hasUsedRescueTools) ...[
+            const SizedBox(height: 12),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "You've already used",
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Keep building on what you've already done.",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (_usedWait)
+                    _usedToolLine('10-minute pause started'),
+                  if (_usedReasons)
+                    _usedToolLine('Reasons reviewed'),
+                  if (_usedSupport)
+                    _usedToolLine('Support contacted'),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           const AppCard(
             child: Column(
