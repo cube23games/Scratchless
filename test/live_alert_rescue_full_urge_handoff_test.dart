@@ -28,11 +28,10 @@ void main() {
       await tester.pump();
       expect(find.text('Open full urge tools'), findsNothing);
 
-      await tester.scrollUntilVisible(
-        find.text('Read my reasons'),
-        200,
-      );
-      await tester.tap(find.text('Read my reasons'));
+      final reasonsButton = find.text('Read my reasons');
+      await tester.ensureVisible(reasonsButton);
+      await tester.pumpAndSettle();
+      await tester.tap(reasonsButton);
       await tester.pumpAndSettle();
 
       expect(find.text('Read your reasons'), findsOneWidget);
@@ -42,16 +41,14 @@ void main() {
       ).pop();
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(
-        find.text('Open full urge tools'),
-        400,
-      );
-      await tester.pump();
+      final fullUrgeButton = find.text('Open full urge tools');
+      await tester.ensureVisible(fullUrgeButton);
+      await tester.pumpAndSettle();
 
-      expect(find.text('Open full urge tools'), findsOneWidget);
+      expect(fullUrgeButton, findsOneWidget);
       expect(find.text('Open live support options'), findsOneWidget);
 
-      await tester.tap(find.text('Open full urge tools'));
+      await tester.tap(fullUrgeButton);
       await tester.pump();
 
       expect(openedFullUrgeMode, isTrue);

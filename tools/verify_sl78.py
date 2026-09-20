@@ -94,7 +94,7 @@ for token in [
     "autoStartTenMinutePause: true",
     "expect(find.text('Open full urge tools'), findsNothing)",
     "Read my reasons",
-    "expect(find.text('Open full urge tools'), findsOneWidget)",
+    "expect(fullUrgeButton, findsOneWidget)",
     "expect(find.text('Open live support options'), findsOneWidget)",
     "expect(openedFullUrgeMode, isTrue)",
 ]:
