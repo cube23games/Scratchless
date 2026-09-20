@@ -273,6 +273,7 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
 
   void _startTenMinutePause({
     bool showSnackBar = true,
+    bool countAsUserAction = true,
   }) {
     final now = DateTime.now();
     final activeUntil = _waitUntil;
@@ -850,38 +851,39 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
                   children: [
                     const Text(
                       'Need another layer?',
-                    style: TextStyle(
-                      color: AppTheme.mutedText,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
+                      style: TextStyle(
+                        color: AppTheme.mutedText,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Hand this moment off to live gambling support.',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Hand this moment off to live gambling support.',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'If the urge still feels hard to manage, call, text, or chat with someone who can stay with you through it.',
-                    style: TextStyle(
-                      color: AppTheme.mutedText,
-                      fontSize: 14,
+                    const SizedBox(height: 8),
+                    const Text(
+                      'If the urge still feels hard to manage, call, text, or chat with someone who can stay with you through it.',
+                      style: TextStyle(
+                        color: AppTheme.mutedText,
+                        fontSize: 14,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  AppButton(
-                    label: 'Open live support options',
-                    icon: Icons.support_agent_rounded,
-                    isPrimary: false,
-                    onPressed: _openDeeperHelp,
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    AppButton(
+                      label: 'Open live support options',
+                      icon: Icons.support_agent_rounded,
+                      isPrimary: false,
+                      onPressed: _openDeeperHelp,
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ],
           const SizedBox(height: 12),
           const AppCard(
