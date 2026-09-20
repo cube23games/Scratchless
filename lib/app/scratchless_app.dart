@@ -20,9 +20,13 @@ import '../core/services/streak_service.dart';
 import '../core/services/weekly_reflection_service.dart';
 import '../core/services/weekly_summary_service.dart';
 import '../core/storage/app_storage.dart';
+import '../features/accountability/accountability_screen.dart';
+import '../features/coping/coping_strategies_screen.dart';
+import '../features/education/near_miss_screen.dart';
 import '../features/home/home_shell.dart';
 import '../features/live_alert/live_alert_rescue_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
+import '../features/urge/urge_mode_screen.dart';
 import 'app_theme.dart';
 
 class ScratchLessApp extends StatefulWidget {
@@ -548,6 +552,72 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     _persistState();
   }
 
+  void _openCopingStrategiesFromAppNavigator() {
+    final navigator = LocalNotificationService.instance.navigatorKey.currentState;
+    navigator?.push(
+      MaterialPageRoute<void>(
+        builder: (_) => const CopingStrategiesScreen(),
+      ),
+    );
+  }
+
+  void _openNearMissEducationFromAppNavigator() {
+    final navigator = LocalNotificationService.instance.navigatorKey.currentState;
+    navigator?.push(
+      MaterialPageRoute<void>(
+        builder: (_) => const NearMissScreen(),
+      ),
+    );
+  }
+
+  void _openAccountabilityFromAppNavigator() {
+    final navigator = LocalNotificationService.instance.navigatorKey.currentState;
+    navigator?.push(
+      MaterialPageRoute<void>(
+        builder: (_) => AccountabilityScreen(
+          partner: _accountabilityPartner,
+          onSavePartner: _updateAccountabilityPartner,
+          weeklySummary: _weeklySummary,
+          logs: _logs,
+          currentStreakDays: _currentStreakDays,
+          bestStreakDays: _bestStreakDays,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openFullUrgeModeFromLiveAlertRescue() async {
+    final navigator = LocalNotificationService.instance.navigatorKey.currentState;
+    if (navigator == null) {
+      return;
+    }
+
+    await navigator.push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => UrgeModeScreen(
+          averageSpend: _averageSpend,
+          onComplete: _completeDetailedUrgeSession,
+          onStartPremiumTrial: _startPremiumTrial,
+          shouldShowSuccessPremiumPrompt: PremiumPromptService.canShow(
+            type: PremiumPromptType.firstUrgeWin,
+            premiumState: _premiumState,
+            hasSeenSuccessPremiumPrompt: _hasSeenSuccessPremiumPrompt,
+            urgeWinsCount: _urgesDefeated,
+          ),
+          onAcknowledgeSuccessPremiumPrompt:
+              _acknowledgeSuccessPremiumPrompt,
+          onOpenCopingStrategies: _openCopingStrategiesFromAppNavigator,
+          onOpenNearMissEducation: _openNearMissEducationFromAppNavigator,
+          onOpenAccountability: _openAccountabilityFromAppNavigator,
+          accountabilityPartner: _accountabilityPartner,
+          weeklySummary: _weeklySummary,
+          currentStreakDays: _currentStreakDays,
+          reasons: _stopReasons,
+        ),
+      ),
+    );
+  }
+
   Future<void> _openLiveAlertRescue({
     required String placeLabel,
     required bool autoStartTenMinutePause,
@@ -565,6 +635,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
           stopReasons: _stopReasons,
           accountabilityPartner: _accountabilityPartner,
           onLogUrge: _completeDetailedUrgeSession,
+          onOpenFullUrgeMode: _openFullUrgeModeFromLiveAlertRescue,
         ),
       ),
     );

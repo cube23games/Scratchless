@@ -17,6 +17,7 @@ class LiveAlertRescueScreen extends StatefulWidget {
   final List<StopReason> stopReasons;
   final AccountabilityPartner accountabilityPartner;
   final ValueChanged<UrgeSessionLog> onLogUrge;
+  final VoidCallback? onOpenFullUrgeMode;
 
   const LiveAlertRescueScreen({
     super.key,
@@ -25,6 +26,7 @@ class LiveAlertRescueScreen extends StatefulWidget {
     required this.stopReasons,
     required this.accountabilityPartner,
     required this.onLogUrge,
+    this.onOpenFullUrgeMode,
   });
 
   @override
@@ -857,21 +859,32 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Hand this moment off to live gambling support.',
+                      'Choose the next layer that fits right now.',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'If the urge still feels hard to manage, call, text, or chat with someone who can stay with you through it.',
-                      style: TextStyle(
+                    Text(
+                      widget.onOpenFullUrgeMode != null
+                          ? 'Stay inside ScratchLess for the full guided urge tools, or hand this moment off to live gambling support.'
+                          : 'If the urge still feels hard to manage, call, text, or chat with someone who can stay with you through it.',
+                      style: const TextStyle(
                         color: AppTheme.mutedText,
                         fontSize: 14,
                       ),
                     ),
                     const SizedBox(height: 12),
+                    if (widget.onOpenFullUrgeMode != null) ...[
+                      AppButton(
+                        label: 'Open full urge tools',
+                        icon: Icons.shield_outlined,
+                        isPrimary: false,
+                        onPressed: widget.onOpenFullUrgeMode,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
                     AppButton(
                       label: 'Open live support options',
                       icon: Icons.support_agent_rounded,

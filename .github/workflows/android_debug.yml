@@ -84,6 +84,12 @@ jobs:
       - name: Verify SL-77D deeper-handoff contract
         run: python tools/verify_sl77d.py --ci
 
+      - name: Test SL-78 full Urge Mode handoff
+        run: flutter test test/live_alert_rescue_full_urge_handoff_test.dart
+
+      - name: Verify SL-78 full-urge-handoff contract
+        run: python tools/verify_sl78.py --ci
+
       - name: Build QA release APK
         env:
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
