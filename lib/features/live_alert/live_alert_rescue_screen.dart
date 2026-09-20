@@ -117,7 +117,6 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
     required String title,
     required String body,
     bool showSnackBar = true,
-    bool countAsUserAction = true,
   }) {
     if (!mounted) {
       return;
@@ -688,11 +687,10 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                     ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ],
           const SizedBox(height: 12),
           AppCard(
