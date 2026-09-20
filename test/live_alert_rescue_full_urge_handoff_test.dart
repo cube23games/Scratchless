@@ -29,6 +29,7 @@ void main() {
       expect(find.text('Open full urge tools'), findsNothing);
 
       final reasonsButton = find.text('Read my reasons');
+      await tester.scrollUntilVisible(reasonsButton, 300);
       await tester.ensureVisible(reasonsButton);
       await tester.pumpAndSettle();
       await tester.tap(reasonsButton);
@@ -42,6 +43,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final fullUrgeButton = find.text('Open full urge tools');
+      await tester.scrollUntilVisible(fullUrgeButton, 300);
       await tester.ensureVisible(fullUrgeButton);
       await tester.pumpAndSettle();
 
