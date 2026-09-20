@@ -37,6 +37,7 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
   bool _usedReasons = false;
   bool _usedSupport = false;
   bool _usedWait = false;
+  bool _userEngagedRescueTool = false;
   bool _leavingConfirmed = false;
 
   bool get _hasUsedRescueTools =>
@@ -61,7 +62,7 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
           return;
         }
         _autoStarted = true;
-        _startTenMinutePause(showSnackBar: false);
+        _startTenMinutePause(showSnackBar: false, countAsUserAction: false);
       });
     }
   }
@@ -116,6 +117,7 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
     required String title,
     required String body,
     bool showSnackBar = true,
+    bool countAsUserAction = true,
   }) {
     if (!mounted) {
       return;
@@ -184,6 +186,7 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
     if (mounted) {
       setState(() {
         _usedSupport = true;
+        _userEngagedRescueTool = true;
       });
     }
 
@@ -234,6 +237,7 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
     if (mounted) {
       setState(() {
         _usedSupport = true;
+        _userEngagedRescueTool = true;
       });
     }
 
@@ -288,6 +292,7 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
 
     setState(() {
       _usedWait = true;
+      if (countAsUserAction) _userEngagedRescueTool = true;
       _waitUntil = waitUntil;
       _actionFeedbackTitle = '10-minute pause active';
       _actionFeedbackBody =
@@ -324,6 +329,7 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
   void _openReasonsSheet() {
     setState(() {
       _usedReasons = true;
+      _userEngagedRescueTool = true;
     });
 
     showModalBottomSheet<void>(
@@ -462,6 +468,7 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
                     if (mounted) {
                       setState(() {
                         _usedSupport = true;
+        _userEngagedRescueTool = true;
                       });
                     }
 
@@ -680,10 +687,11 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                     ),
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ],
           const SizedBox(height: 12),
           AppCard(
@@ -834,13 +842,14 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Need another layer?',
+            if (_userEngagedRescueTool) ...[
+              const SizedBox(height: 12),
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Need another layer?',
                     style: TextStyle(
                       color: AppTheme.mutedText,
                       fontSize: 13,

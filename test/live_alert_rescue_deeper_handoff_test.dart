@@ -12,6 +12,7 @@ void main() {
         MaterialApp(
           home: LiveAlertRescueScreen(
             placeLabel: 'Test shop',
+            autoStartTenMinutePause: true,
             stopReasons: const [],
             accountabilityPartner: AccountabilityPartner.empty(),
             onLogUrge: (_) {},
@@ -19,6 +20,7 @@ void main() {
         ),
       );
 
+      await tester.pump();
       expect(find.text('Need another layer?'), findsNothing);
 
       await tester.scrollUntilVisible(
@@ -67,6 +69,9 @@ void main() {
         200,
       );
       expect(find.text('Open live chat'), findsOneWidget);
+
+      await tester.pump(const Duration(minutes: 11));
+      await tester.pump();
     },
   );
 }
