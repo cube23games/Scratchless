@@ -36,6 +36,7 @@ void main() {
       final logUrgeButton = find.text('Log the urge');
       await tester.scrollUntilVisible(logUrgeButton, 300);
       await tester.ensureVisible(logUrgeButton);
+      await tester.pumpAndSettle();
       await tester.tap(logUrgeButton);
       await tester.pumpAndSettle();
 
