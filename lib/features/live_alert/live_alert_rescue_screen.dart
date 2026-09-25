@@ -8,8 +8,16 @@ import '../../core/models/accountability_partner.dart';
 import '../../core/models/stop_reason.dart';
 import '../../core/models/urge_session_log.dart';
 import '../../core/services/accountability_message_service.dart';
+import '../logging/purchase_log_sheet.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+
+typedef LiveAlertPurchaseRecoveryHandler = void Function({
+  required double amount,
+  String? note,
+  required List<String> tags,
+  required UrgeSessionLog session,
+});
 
 class LiveAlertRescueScreen extends StatefulWidget {
   final String placeLabel;
@@ -17,6 +25,7 @@ class LiveAlertRescueScreen extends StatefulWidget {
   final List<StopReason> stopReasons;
   final AccountabilityPartner accountabilityPartner;
   final ValueChanged<UrgeSessionLog> onLogUrge;
+  final LiveAlertPurchaseRecoveryHandler? onLogPurchaseAfterRescue;
   final VoidCallback? onOpenFullUrgeMode;
 
   const LiveAlertRescueScreen({
@@ -26,6 +35,7 @@ class LiveAlertRescueScreen extends StatefulWidget {
     required this.stopReasons,
     required this.accountabilityPartner,
     required this.onLogUrge,
+    this.onLogPurchaseAfterRescue,
     this.onOpenFullUrgeMode,
   });
 
@@ -39,11 +49,12 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
   bool _usedReasons = false;
   bool _usedSupport = false;
   bool _usedWait = false;
+  bool _purchaseLogged = false;
   bool _userEngagedRescueTool = false;
   bool _leavingConfirmed = false;
 
   bool get _hasUsedRescueTools =>
-      _usedWait || _usedReasons || _usedSupport;
+      _usedWait || _usedReasons || _usedSupport || _purchaseLogged;
   String? _actionFeedbackTitle;
   String? _actionFeedbackBody;
 
@@ -539,6 +550,49 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
     );
   }
 
+  void _openPurchaseRecoverySheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) {
+        return PurchaseLogSheet(
+          onSave: (amount, note, tags) {
+            final now = DateTime.now();
+            final session = UrgeSessionLog(
+              startedAt: now,
+              completedAt: now,
+              selectedScriptId: 'live_alert_rescue_purchase',
+              openedFullUrgeScript: false,
+              usedCopingStrategies: _usedWait || _usedReasons,
+              usedNearMissEducation: false,
+              usedAccountability: _usedSupport,
+              outcome: UrgeSessionOutcome.purchaseOccurred,
+            );
+
+            widget.onLogPurchaseAfterRescue?.call(
+              amount: amount,
+              note: note,
+              tags: tags,
+              session: session,
+            );
+
+            if (!mounted) {
+              return;
+            }
+
+            setState(() {
+              _purchaseLogged = true;
+              _userEngagedRescueTool = true;
+              _actionFeedbackTitle = 'Purchase logged — stop the spiral here';
+              _actionFeedbackBody =
+                  'One purchase does not have to become another. Put distance between you and the tickets, then choose the next protective step.';
+            });
+          },
+        );
+      },
+    );
+  }
+
   void _openRealLogSheet() {
     showModalBottomSheet<void>(
       context: context,
@@ -619,6 +673,18 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
                   );
                 },
               ),
+              if (widget.onLogPurchaseAfterRescue != null) ...[
+                const SizedBox(height: 8),
+                AppButton(
+                  label: 'I bought tickets',
+                  icon: Icons.receipt_long_outlined,
+                  isPrimary: false,
+                  onPressed: () {
+                    Navigator.of(sheetContext).pop();
+                    _openPurchaseRecoverySheet();
+                  },
+                ),
+              ],
             ],
           ),
         );
@@ -840,6 +906,8 @@ class _LiveAlertRescueScreenState extends State<LiveAlertRescueScreen> {
                     _usedToolLine('Reasons reviewed'),
                   if (_usedSupport)
                     _usedToolLine('Support contacted'),
+                  if (_purchaseLogged)
+                    _usedToolLine('Purchase logged honestly'),
                 ],
               ),
             ),

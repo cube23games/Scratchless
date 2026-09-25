@@ -1,6 +1,7 @@
 enum UrgeSessionOutcome {
   resolvedWithoutPurchase,
   stillDeciding,
+  purchaseOccurred,
   unknownLegacy,
 }
 
@@ -36,6 +37,8 @@ class UrgeSessionLog {
         return 'resolved_without_purchase';
       case UrgeSessionOutcome.stillDeciding:
         return 'still_deciding';
+      case UrgeSessionOutcome.purchaseOccurred:
+        return 'purchase_occurred';
       case UrgeSessionOutcome.unknownLegacy:
         return 'unknown_legacy';
     }
@@ -80,6 +83,8 @@ class UrgeSessionLog {
         return UrgeSessionOutcome.resolvedWithoutPurchase;
       case 'still_deciding':
         return UrgeSessionOutcome.stillDeciding;
+      case 'purchase_occurred':
+        return UrgeSessionOutcome.purchaseOccurred;
       case 'unknown_legacy':
         return UrgeSessionOutcome.unknownLegacy;
     }

@@ -243,6 +243,34 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     _persistState();
   }
 
+  void _logPurchaseAfterLiveAlertRescue({
+    required double amount,
+    String? note,
+    required List<String> tags,
+    required UrgeSessionLog session,
+  }) {
+    final eventTime = session.completedAt;
+
+    setState(() {
+      _logs = <PurchaseLog>[
+        PurchaseLog(
+          id: eventTime.microsecondsSinceEpoch.toString(),
+          createdAt: eventTime,
+          amount: amount,
+          note: note,
+          tags: tags,
+        ),
+        ..._logs,
+      ];
+      _urgeSessions = <UrgeSessionLog>[
+        session,
+        ..._urgeSessions,
+      ];
+    });
+
+    _persistState();
+  }
+
   void _editPurchase(
     String id,
     double amount,
@@ -635,6 +663,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
           stopReasons: _stopReasons,
           accountabilityPartner: _accountabilityPartner,
           onLogUrge: _completeDetailedUrgeSession,
+          onLogPurchaseAfterRescue: _logPurchaseAfterLiveAlertRescue,
           onOpenFullUrgeMode: _openFullUrgeModeFromLiveAlertRescue,
         ),
       ),

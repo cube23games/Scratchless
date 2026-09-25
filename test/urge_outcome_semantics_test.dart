@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:scratchless/core/models/purchase_log.dart';
 import 'package:scratchless/core/models/urge_session_log.dart';
 import 'package:scratchless/core/models/premium_state.dart';
 import 'package:scratchless/core/services/premium_prompt_service.dart';
@@ -33,12 +34,17 @@ void main() {
     final now = DateTime(2026, 9, 19, 2);
     final resolved = _session(at: now, outcome: UrgeSessionOutcome.resolvedWithoutPurchase);
     final deciding = _session(at: now, outcome: UrgeSessionOutcome.stillDeciding, scriptId: 'live_alert_rescue_deciding');
+    final purchase = _session(at: now, outcome: UrgeSessionOutcome.purchaseOccurred, scriptId: 'live_alert_rescue_purchase');
     final resolvedReloaded = UrgeSessionLog.fromJson(resolved.toJson());
     final decidingReloaded = UrgeSessionLog.fromJson(deciding.toJson());
+    final purchaseReloaded = UrgeSessionLog.fromJson(purchase.toJson());
     expect(resolvedReloaded.countsAsUrgeWin, isTrue);
     expect(resolvedReloaded.countsTowardCashKept, isTrue);
     expect(decidingReloaded.countsAsUrgeWin, isFalse);
     expect(decidingReloaded.countsTowardCashKept, isFalse);
+    expect(purchaseReloaded.outcome, UrgeSessionOutcome.purchaseOccurred);
+    expect(purchaseReloaded.countsAsUrgeWin, isFalse);
+    expect(purchaseReloaded.countsTowardCashKept, isFalse);
   });
 
   test('legacy live-alert deciding is migrated as not a win', () {
@@ -80,6 +86,33 @@ void main() {
     );
     expect(summary.urgeWinsThisWeek, 1);
     expect(summary.cashKeptThisWeek, 15);
+  });
+
+  test('purchase outcome records spend truth without creating an urge win', () {
+    final now = DateTime(2026, 9, 19, 12);
+    final summary = WeeklySummaryService.build(
+      purchaseLogs: [
+        PurchaseLog(
+          id: 'purchase-1',
+          createdAt: now,
+          amount: 15,
+          tags: const ['Saw a display'],
+        ),
+      ],
+      urgeSessions: [
+        _session(
+          at: now,
+          outcome: UrgeSessionOutcome.purchaseOccurred,
+          scriptId: 'live_alert_rescue_purchase',
+        ),
+      ],
+      averageSpend: 15,
+      now: now,
+    );
+    expect(summary.purchasesThisWeek, 1);
+    expect(summary.spentThisWeek, 15);
+    expect(summary.urgeWinsThisWeek, 0);
+    expect(summary.cashKeptThisWeek, 0);
   });
 
   test('first-win prompt uses win count rather than raw sessions', () {
