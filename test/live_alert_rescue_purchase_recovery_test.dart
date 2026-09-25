@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:scratchless/core/models/accountability_partner.dart';
 import 'package:scratchless/core/models/urge_session_log.dart';
 import 'package:scratchless/features/live_alert/live_alert_rescue_screen.dart';
-import 'package:scratchless/features/logging/purchase_log_sheet.dart';
 
 void main() {
   testWidgets(
@@ -47,11 +46,9 @@ void main() {
 
       expect(find.text('Log a scratch-off purchase'), findsOneWidget);
 
-      final saveEntryButton = find.descendant(
-        of: find.byType(PurchaseLogSheet),
-        matching: find.text('Save entry'),
-      );
-      await tester.scrollUntilVisible(saveEntryButton, 300);
+      final saveEntryButton =
+          find.widgetWithText(ElevatedButton, 'Save entry').last;
+      expect(saveEntryButton, findsOneWidget);
       await tester.ensureVisible(saveEntryButton);
       await tester.pumpAndSettle();
       await tester.tap(saveEntryButton);
