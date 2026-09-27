@@ -59,18 +59,40 @@ void main() {
       expect(savedSession!.outcome, UrgeSessionOutcome.purchaseOccurred);
       expect(savedSession!.countsAsUrgeWin, isFalse);
       expect(savedSession!.countsTowardCashKept, isFalse);
+
+      final rescueList = find.byType(ListView);
+      expect(rescueList, findsOneWidget);
+
+      final rescueScrollable = find.descendant(
+        of: rescueList,
+        matching: find.byType(Scrollable),
+      );
+      expect(rescueScrollable, findsOneWidget);
+
+      final scrollState =
+          tester.state<ScrollableState>(rescueScrollable);
+
+      scrollState.position.jumpTo(
+        scrollState.position.minScrollExtent,
+      );
+      await tester.pumpAndSettle();
+
       expect(
         find.text('Purchase logged — stop the spiral here'),
         findsOneWidget,
       );
-      expect(find.text('Purchase logged honestly'), findsOneWidget);
 
-      final recoveryHeading = find.text('Need another layer?');
-      await tester.scrollUntilVisible(recoveryHeading, 300);
-      await tester.ensureVisible(recoveryHeading);
+      scrollState.position.jumpTo(
+        scrollState.position.maxScrollExtent,
+      );
+      await tester.pumpAndSettle();
+      scrollState.position.jumpTo(
+        scrollState.position.maxScrollExtent,
+      );
       await tester.pumpAndSettle();
 
-      expect(recoveryHeading, findsOneWidget);
+      expect(find.text('Purchase logged honestly'), findsOneWidget);
+      expect(find.text('Need another layer?'), findsOneWidget);
       expect(find.text('Open full urge tools'), findsOneWidget);
       expect(find.text('Open live support options'), findsOneWidget);
     },
