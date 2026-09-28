@@ -250,7 +250,7 @@ jobs:
 
           "$apksigner_bin" verify --print-certs \
             dist/scratchless-store.apk \
-            > dist/store-signing.txt
+            > dist/store-signing.txt 2>&1
 
           aab_signature_entries="$(
             unzip -Z1 dist/scratchless-store.aab |
@@ -292,9 +292,19 @@ jobs:
             > dist/store-aab-signing.txt
 
           apk_digest="$(
-            awk -F': ' \
-              '/Signer #1 certificate SHA-256 digest:/ {print $2; exit}' \
-              dist/store-signing.txt |
+            awk '
+              {
+                lower = tolower($0)
+                if (
+                  lower ~ /certificate/ &&
+                  lower ~ /sha-256/ &&
+                  lower ~ /digest/
+                ) {
+                  print $NF
+                  exit
+                }
+              }
+            ' dist/store-signing.txt |
             tr -d '[:space:]:' |
             tr '[:upper:]' '[:lower:]'
           )"
@@ -310,8 +320,19 @@ jobs:
           echo "APK certificate SHA256=$apk_digest"
           echo "AAB certificate SHA256=$aab_digest"
 
-          test -n "$apk_digest"
-          test -n "$aab_digest"
+          if [ -z "$apk_digest" ]; then
+            echo "Unable to parse APK signer SHA-256."
+            echo "=== BEGIN APKSIGNER OUTPUT ==="
+            cat dist/store-signing.txt
+            echo "=== END APKSIGNER OUTPUT ==="
+            exit 1
+          fi
+
+          if [ -z "$aab_digest" ]; then
+            echo "Unable to parse AAB signer SHA-256."
+            cat dist/store-aab-signing.txt
+            exit 1
+          fi
 
           if [ "$apk_digest" != "$aab_digest" ]; then
             echo "Store APK and AAB certificate digests do not match."
