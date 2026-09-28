@@ -252,8 +252,53 @@ jobs:
             dist/scratchless-store.apk \
             > dist/store-signing.txt
 
-          keytool -printcert -jarfile \
+          aab_signature_entries="$(
+            unzip -Z1 dist/scratchless-store.aab |
+              grep -Ei '^META-INF/[^/]+\.(RSA|DSA|EC)$' ||
+              true
+          )"
+
+          test -n "$aab_signature_entries"
+
+          aab_signature_count="$(
+            printf '%s\n' "$aab_signature_entries" |
+              sed '/^$/d' |
+              wc -l |
+              tr -d '[:space:]'
+          )"
+
+          if [ "$aab_signature_count" -ne 1 ]; then
+            echo "Expected exactly one AAB signing certificate block; found $aab_signature_count."
+            printf '%s\n' "$aab_signature_entries"
+            exit 1
+          fi
+
+          aab_signature_entry="$aab_signature_entries"
+          aab_signature_block="$RUNNER_TEMP/scratchless-store-aab-signature.bin"
+          aab_cert_pem="$RUNNER_TEMP/scratchless-store-aab-cert.pem"
+
+          unzip -p \
             dist/scratchless-store.aab \
+            "$aab_signature_entry" \
+            > "$aab_signature_block"
+
+          test -s "$aab_signature_block"
+
+          openssl pkcs7 \
+            -inform DER \
+            -in "$aab_signature_block" \
+            -print_certs \
+            -out "$aab_cert_pem"
+
+          test -s "$aab_cert_pem"
+
+          openssl x509 \
+            -in "$aab_cert_pem" \
+            -noout \
+            -subject \
+            -issuer \
+            -fingerprint \
+            -sha256 \
             > dist/store-aab-signing.txt
 
           apk_digest="$(
@@ -265,9 +310,11 @@ jobs:
           )"
 
           aab_digest="$(
-            awk '/SHA256:/ {print $2; exit}' \
-              dist/store-aab-signing.txt |
-            tr -d '[:space:]:' |
+            openssl x509 \
+              -in "$aab_cert_pem" \
+              -outform DER |
+            sha256sum |
+            awk '{print $1}' |
             tr '[:upper:]' '[:lower:]'
           )"
 
