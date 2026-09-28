@@ -275,7 +275,6 @@ jobs:
 
           aab_signature_entry="$aab_signature_entries"
           aab_signature_block="$RUNNER_TEMP/scratchless-store-aab-signature.bin"
-          aab_cert_pem="$RUNNER_TEMP/scratchless-store-aab-cert.pem"
 
           unzip -p \
             dist/scratchless-store.aab \
@@ -284,21 +283,12 @@ jobs:
 
           test -s "$aab_signature_block"
 
-          openssl pkcs7 \
-            -inform DER \
-            -in "$aab_signature_block" \
-            -print_certs \
-            -out "$aab_cert_pem"
+          jarsigner -verify \
+            dist/scratchless-store.aab \
+            > dist/store-aab-verify.txt 2>&1
 
-          test -s "$aab_cert_pem"
-
-          openssl x509 \
-            -in "$aab_cert_pem" \
-            -noout \
-            -subject \
-            -issuer \
-            -fingerprint \
-            -sha256 \
+          keytool -printcert \
+            -file "$aab_signature_block" \
             > dist/store-aab-signing.txt
 
           apk_digest="$(
@@ -310,13 +300,15 @@ jobs:
           )"
 
           aab_digest="$(
-            openssl x509 \
-              -in "$aab_cert_pem" \
-              -outform DER |
-            sha256sum |
-            awk '{print $1}' |
+            awk -F': ' \
+              '/^[[:space:]]*SHA256:/ {print $2; exit}' \
+              dist/store-aab-signing.txt |
+            tr -d '[:space:]:' |
             tr '[:upper:]' '[:lower:]'
           )"
+
+          echo "APK certificate SHA256=$apk_digest"
+          echo "AAB certificate SHA256=$aab_digest"
 
           test -n "$apk_digest"
           test -n "$aab_digest"
@@ -443,5 +435,6 @@ jobs:
           path: |
             dist/store-signing.txt
             dist/store-aab-signing.txt
+            dist/store-aab-verify.txt
             dist/store-signing-mode.txt
           if-no-files-found: error
