@@ -5,6 +5,62 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val storeKeystorePath =
+    providers.environmentVariable("SCRATCHLESS_STORE_KEYSTORE_PATH").orNull.orEmpty()
+val storeKeystorePassword =
+    providers.environmentVariable("SCRATCHLESS_STORE_KEYSTORE_PASSWORD").orNull.orEmpty()
+val storeKeyAlias =
+    providers.environmentVariable("SCRATCHLESS_STORE_KEY_ALIAS").orNull.orEmpty()
+val storeKeyPassword =
+    providers.environmentVariable("SCRATCHLESS_STORE_KEY_PASSWORD").orNull.orEmpty()
+val allowDebugStoreCandidate =
+    providers.environmentVariable("SCRATCHLESS_ALLOW_DEBUG_STORE_CANDIDATE").orNull == "true"
+
+val storeSigningValues = listOf(
+    storeKeystorePath,
+    storeKeystorePassword,
+    storeKeyAlias,
+    storeKeyPassword,
+)
+val configuredStoreSigningValues = storeSigningValues.count { it.isNotEmpty() }
+val hasCompleteStoreSigning =
+    configuredStoreSigningValues == storeSigningValues.size
+
+val isStoreReleaseRequested = gradle.startParameter.taskNames.any { taskName ->
+    val normalized = taskName.lowercase()
+    normalized.contains("store") && normalized.contains("release")
+}
+
+if (isStoreReleaseRequested &&
+    configuredStoreSigningValues in 1 until storeSigningValues.size
+) {
+    throw GradleException(
+        "Incomplete ScratchLess Store signing configuration. " +
+            "Provide every Store signing value or none of them.",
+    )
+}
+
+if (isStoreReleaseRequested &&
+    !hasCompleteStoreSigning &&
+    !allowDebugStoreCandidate
+) {
+    throw GradleException(
+        "ScratchLess Store release signing is not configured. " +
+            "Production Store builds fail closed unless signing is complete. " +
+            "Only CI candidate builds may explicitly set " +
+            "SCRATCHLESS_ALLOW_DEBUG_STORE_CANDIDATE=true.",
+    )
+}
+
+if (isStoreReleaseRequested &&
+    hasCompleteStoreSigning &&
+    !file(storeKeystorePath).isFile
+) {
+    throw GradleException(
+        "ScratchLess Store keystore file does not exist at the configured path.",
+    )
+}
+
 android {
     namespace = "com.cube23.scratchless"
     compileSdk = flutter.compileSdkVersion
@@ -31,6 +87,17 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasCompleteStoreSigning) {
+            create("storeRelease") {
+                storeFile = file(storeKeystorePath)
+                storePassword = storeKeystorePassword
+                keyAlias = storeKeyAlias
+                keyPassword = storeKeyPassword
+            }
+        }
+    }
+
     flavorDimensions += "distribution"
 
     productFlavors {
@@ -41,6 +108,7 @@ android {
             resValue("string", "app_name", "ScratchLess QA")
             manifestPlaceholders["appIcon"] =
                 "@drawable/ic_launcher_qa"
+            signingConfig = signingConfigs.getByName("debug")
         }
 
         create("store") {
@@ -48,14 +116,19 @@ android {
             resValue("string", "app_name", "ScratchLess")
             manifestPlaceholders["appIcon"] =
                 "@mipmap/ic_launcher"
+            signingConfig = if (hasCompleteStoreSigning) {
+                signingConfigs.getByName("storeRelease")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Distribution flavors own their signing configuration.
+            // QA stays debug-signed. Store is either explicitly candidate-debug
+            // or uses the secret-fed Store release signing config.
         }
     }
 

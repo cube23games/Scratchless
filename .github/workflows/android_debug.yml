@@ -96,6 +96,59 @@ jobs:
       - name: Verify SL-79 purchase-recovery contract
         run: python tools/verify_sl79.py --ci
 
+      - name: Verify SL-80A signing plumbing
+        run: python tools/verify_sl80a.py --ci
+
+      - name: Prepare Store signing posture
+        shell: bash
+        env:
+          SCRATCHLESS_STORE_KEYSTORE_B64: ${{ secrets.SCRATCHLESS_STORE_KEYSTORE_B64 }}
+          SCRATCHLESS_STORE_KEYSTORE_PASSWORD: ${{ secrets.SCRATCHLESS_STORE_KEYSTORE_PASSWORD }}
+          SCRATCHLESS_STORE_KEY_ALIAS: ${{ secrets.SCRATCHLESS_STORE_KEY_ALIAS }}
+          SCRATCHLESS_STORE_KEY_PASSWORD: ${{ secrets.SCRATCHLESS_STORE_KEY_PASSWORD }}
+          SCRATCHLESS_STORE_CERT_SHA256: ${{ secrets.SCRATCHLESS_STORE_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+
+          present=0
+          for value in \
+            "$SCRATCHLESS_STORE_KEYSTORE_B64" \
+            "$SCRATCHLESS_STORE_KEYSTORE_PASSWORD" \
+            "$SCRATCHLESS_STORE_KEY_ALIAS" \
+            "$SCRATCHLESS_STORE_KEY_PASSWORD" \
+            "$SCRATCHLESS_STORE_CERT_SHA256"
+          do
+            if [ -n "$value" ]; then
+              present=$((present + 1))
+            fi
+          done
+
+          if [ "$present" -eq 0 ]; then
+            echo "SCRATCHLESS_STORE_SIGNING_READY=false" >> "$GITHUB_ENV"
+            echo "SCRATCHLESS_ALLOW_DEBUG_STORE_CANDIDATE=true" >> "$GITHUB_ENV"
+            echo "Store signing secrets are absent; Store artifacts remain explicit debug-signed candidates."
+            exit 0
+          fi
+
+          if [ "$present" -ne 5 ]; then
+            echo "Incomplete Store signing secret set; refusing to build."
+            exit 1
+          fi
+
+          keystore="$RUNNER_TEMP/scratchless-store-upload.jks"
+
+          printf '%s' "$SCRATCHLESS_STORE_KEYSTORE_B64" |
+            base64 --decode > "$keystore"
+
+          test -s "$keystore"
+          chmod 600 "$keystore"
+
+          echo "SCRATCHLESS_STORE_SIGNING_READY=true" >> "$GITHUB_ENV"
+          echo "SCRATCHLESS_ALLOW_DEBUG_STORE_CANDIDATE=false" >> "$GITHUB_ENV"
+          echo "SCRATCHLESS_STORE_KEYSTORE_PATH=$keystore" >> "$GITHUB_ENV"
+
+          echo "Complete Store signing material is available."
+
       - name: Build QA release APK
         env:
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
@@ -109,6 +162,9 @@ jobs:
       - name: Build Store release APK
         env:
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          SCRATCHLESS_STORE_KEYSTORE_PASSWORD: ${{ secrets.SCRATCHLESS_STORE_KEYSTORE_PASSWORD }}
+          SCRATCHLESS_STORE_KEY_ALIAS: ${{ secrets.SCRATCHLESS_STORE_KEY_ALIAS }}
+          SCRATCHLESS_STORE_KEY_PASSWORD: ${{ secrets.SCRATCHLESS_STORE_KEY_PASSWORD }}
         run: >
           flutter build apk
           --flavor store
@@ -119,6 +175,9 @@ jobs:
       - name: Build Store release AAB
         env:
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          SCRATCHLESS_STORE_KEYSTORE_PASSWORD: ${{ secrets.SCRATCHLESS_STORE_KEYSTORE_PASSWORD }}
+          SCRATCHLESS_STORE_KEY_ALIAS: ${{ secrets.SCRATCHLESS_STORE_KEY_ALIAS }}
+          SCRATCHLESS_STORE_KEY_PASSWORD: ${{ secrets.SCRATCHLESS_STORE_KEY_PASSWORD }}
         run: >
           flutter build appbundle
           --flavor store
@@ -169,6 +228,95 @@ jobs:
           cp "$store_aab" dist/scratchless-store.aab
 
           ls -lh dist
+
+      - name: Verify Store signing posture
+        shell: bash
+        env:
+          SCRATCHLESS_STORE_CERT_SHA256: ${{ secrets.SCRATCHLESS_STORE_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+
+          apksigner_bin="$(
+            find "$ANDROID_HOME/build-tools" \
+              -type f \
+              -name apksigner \
+              -print |
+            sort -V |
+            tail -1
+          )"
+
+          test -n "$apksigner_bin"
+          test -x "$apksigner_bin"
+
+          "$apksigner_bin" verify --print-certs \
+            dist/scratchless-store.apk \
+            > dist/store-signing.txt
+
+          keytool -printcert -jarfile \
+            dist/scratchless-store.aab \
+            > dist/store-aab-signing.txt
+
+          apk_digest="$(
+            awk -F': ' \
+              '/Signer #1 certificate SHA-256 digest:/ {print $2; exit}' \
+              dist/store-signing.txt |
+            tr -d '[:space:]:' |
+            tr '[:upper:]' '[:lower:]'
+          )"
+
+          aab_digest="$(
+            awk '/SHA256:/ {print $2; exit}' \
+              dist/store-aab-signing.txt |
+            tr -d '[:space:]:' |
+            tr '[:upper:]' '[:lower:]'
+          )"
+
+          test -n "$apk_digest"
+          test -n "$aab_digest"
+
+          if [ "$apk_digest" != "$aab_digest" ]; then
+            echo "Store APK and AAB certificate digests do not match."
+            exit 1
+          fi
+
+          if [ "$SCRATCHLESS_STORE_SIGNING_READY" = "true" ]; then
+            expected="$(
+              printf '%s' "$SCRATCHLESS_STORE_CERT_SHA256" |
+              tr -d '[:space:]:' |
+              tr '[:upper:]' '[:lower:]'
+            )"
+
+            test -n "$expected"
+
+            if [ "$apk_digest" != "$expected" ]; then
+              echo "Store signing certificate digest mismatch."
+              exit 1
+            fi
+
+            if grep -Fqi "CN=Android Debug" dist/store-signing.txt; then
+              echo "Production signing mode unexpectedly uses Android Debug."
+              exit 1
+            fi
+
+            {
+              echo "mode=signed"
+              echo "certificate_sha256=$apk_digest"
+            } > dist/store-signing-mode.txt
+
+            echo "Store artifacts verified with configured signing certificate."
+          else
+            if ! grep -Fqi "CN=Android Debug" dist/store-signing.txt; then
+              echo "Candidate mode expected the Android Debug certificate."
+              exit 1
+            fi
+
+            {
+              echo "mode=candidate-debug"
+              echo "certificate_sha256=$apk_digest"
+            } > dist/store-signing-mode.txt
+
+            echo "Store artifacts are explicit debug-signed candidates; not production-ready."
+          fi
 
       - name: Verify application identities
         shell: bash
@@ -239,4 +387,14 @@ jobs:
         with:
           name: scratchless-store-aab
           path: dist/scratchless-store.aab
+          if-no-files-found: error
+
+      - name: Upload Store signing metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: scratchless-store-signing-metadata
+          path: |
+            dist/store-signing.txt
+            dist/store-aab-signing.txt
+            dist/store-signing-mode.txt
           if-no-files-found: error
