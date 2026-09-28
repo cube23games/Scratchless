@@ -295,11 +295,7 @@ jobs:
             awk '
               {
                 lower = tolower($0)
-                if (
-                  lower ~ /certificate/ &&
-                  lower ~ /sha-256/ &&
-                  lower ~ /digest/
-                ) {
+                if (lower ~ /certificate/ && lower ~ /sha-256/ && lower ~ /digest/) {
                   print $NF
                   exit
                 }
