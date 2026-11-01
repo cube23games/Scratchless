@@ -8,6 +8,7 @@ import '../../core/models/risky_place.dart';
 import '../../core/models/reminder_settings.dart';
 import '../../core/models/spend_cap_plan.dart';
 import '../../core/models/stop_reason.dart';
+import '../../core/models/starting_plan.dart';
 import '../../core/models/urge_session_log.dart';
 import '../../core/models/weekly_reflection_archive_item.dart';
 import '../../core/services/milestone_service.dart';
@@ -31,12 +32,10 @@ class HomeShell extends StatefulWidget {
   final int currentStreakDays;
   final int bestStreakDays;
   final int urgesDefeated;
-  final int frequencyPerWeek;
-  final double averageSpend;
+  final StartingPlan startingPlan;
   final double estimatedCashKept;
   final double totalSpent;
   final double monthlySpendEstimate;
-  final String goal;
   final List<PurchaseLog> logs;
   final List<UrgeSessionLog> urgeSessions;
   final ReminderSettings reminderSettings;
@@ -76,19 +75,17 @@ class HomeShell extends StatefulWidget {
   final ValueChanged<RiskyPlace> onEditRiskyPlace;
   final void Function(String id) onDeleteRiskyPlace;
   final ValueChanged<String> onCelebrateMilestone;
-  final ValueChanged<String> onUpdateGoal;
+  final ValueChanged<StartingPlan> onUpdateStartingPlan;
 
   const HomeShell({
     super.key,
     required this.currentStreakDays,
     required this.bestStreakDays,
     required this.urgesDefeated,
-    required this.frequencyPerWeek,
-    required this.averageSpend,
+    required this.startingPlan,
     required this.estimatedCashKept,
     required this.totalSpent,
     required this.monthlySpendEstimate,
-    required this.goal,
     required this.logs,
     required this.urgeSessions,
     required this.reminderSettings,
@@ -126,7 +123,7 @@ class HomeShell extends StatefulWidget {
     required this.onEditRiskyPlace,
     required this.onDeleteRiskyPlace,
     required this.onCelebrateMilestone,
-    required this.onUpdateGoal,
+    required this.onUpdateStartingPlan,
   });
 
   @override
@@ -254,7 +251,7 @@ class _HomeShellState extends State<HomeShell> {
         currentStreakDays: widget.currentStreakDays,
         bestStreakDays: widget.bestStreakDays,
         urgesDefeated: widget.urgesDefeated,
-        averageSpend: widget.averageSpend,
+        startingPlan: widget.startingPlan,
         estimatedCashKept: widget.estimatedCashKept,
         totalSpent: widget.totalSpent,
         monthlySpendEstimate: widget.monthlySpendEstimate,
@@ -294,7 +291,7 @@ class _HomeShellState extends State<HomeShell> {
         urgeSessions: widget.urgeSessions,
         currentStreakDays: widget.currentStreakDays,
         bestStreakDays: widget.bestStreakDays,
-        averageSpend: widget.averageSpend,
+        averageSpend: widget.startingPlan.averageSpend,
         monthlySpendEstimate: widget.monthlySpendEstimate,
         estimatedCashKept: widget.estimatedCashKept,
         weeklySummary: widget.weeklySummary,
@@ -310,10 +307,7 @@ class _HomeShellState extends State<HomeShell> {
         onDeletePurchase: widget.onDeletePurchase,
       ),
       ProfileScreen(
-        goal: widget.goal,
-        frequencyPerWeek: widget.frequencyPerWeek,
-        averageSpend: widget.averageSpend,
-        monthlySpendEstimate: widget.monthlySpendEstimate,
+        startingPlan: widget.startingPlan,
         currentStreakDays: widget.currentStreakDays,
         bestStreakDays: widget.bestStreakDays,
         reminderSettings: widget.reminderSettings,
@@ -333,7 +327,7 @@ class _HomeShellState extends State<HomeShell> {
         onOpenRiskyPlaces: _openRiskyPlaces,
         onOpenLiveAlertRescueTest:
             widget.onOpenLiveAlertRescueTest,
-        onUpdateGoal: widget.onUpdateGoal,
+        onUpdateStartingPlan: widget.onUpdateStartingPlan,
       ),
     ];
 

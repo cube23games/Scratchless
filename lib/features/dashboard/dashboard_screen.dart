@@ -7,6 +7,7 @@ import '../../core/models/purchase_log.dart';
 import '../../core/models/urge_session_log.dart';
 import '../../core/models/spend_cap_plan.dart';
 import '../../core/models/stop_reason.dart';
+import '../../core/models/starting_plan.dart';
 import '../../core/services/milestone_service.dart';
 import '../../core/services/spend_cap_service.dart';
 import '../../core/services/risky_time_service.dart';
@@ -22,7 +23,7 @@ class DashboardScreen extends StatelessWidget {
   final int currentStreakDays;
   final int bestStreakDays;
   final int urgesDefeated;
-  final double averageSpend;
+  final StartingPlan startingPlan;
   final double estimatedCashKept;
   final double totalSpent;
   final double monthlySpendEstimate;
@@ -61,7 +62,7 @@ class DashboardScreen extends StatelessWidget {
     required this.currentStreakDays,
     required this.bestStreakDays,
     required this.urgesDefeated,
-    required this.averageSpend,
+    required this.startingPlan,
     required this.estimatedCashKept,
     required this.totalSpent,
     required this.monthlySpendEstimate,
@@ -397,7 +398,7 @@ class DashboardScreen extends StatelessWidget {
               final completed = await Navigator.of(context).push<bool>(
                 MaterialPageRoute<bool>(
                   builder: (_) => UrgeModeScreen(
-                    averageSpend: averageSpend,
+                    startingPlan: startingPlan,
                     onComplete: onCompleteDetailedUrgeSession,
                     onStartPremiumTrial: onStartPremiumTrial,
                     shouldShowSuccessPremiumPrompt:

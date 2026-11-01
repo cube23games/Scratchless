@@ -5,17 +5,16 @@ import '../../core/config/app_build_config.dart';
 import '../../core/models/accountability_partner.dart';
 import '../../core/models/premium_state.dart';
 import '../../core/models/reminder_settings.dart';
+import '../../core/models/starting_plan.dart';
 import '../../core/services/risky_time_service.dart';
 import '../../features/premium/premium_screen.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 import '../urge/urge_scripts_screen.dart';
+import 'starting_plan_editor_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
-  final String goal;
-  final int frequencyPerWeek;
-  final double averageSpend;
-  final double monthlySpendEstimate;
+  final StartingPlan startingPlan;
   final int currentStreakDays;
   final int bestStreakDays;
   final ReminderSettings reminderSettings;
@@ -34,14 +33,11 @@ class ProfileScreen extends StatelessWidget {
   final VoidCallback onOpenPreStoreMode;
   final VoidCallback onOpenRiskyPlaces;
   final VoidCallback onOpenLiveAlertRescueTest;
-  final ValueChanged<String> onUpdateGoal;
+  final ValueChanged<StartingPlan> onUpdateStartingPlan;
 
   const ProfileScreen({
     super.key,
-    required this.goal,
-    required this.frequencyPerWeek,
-    required this.averageSpend,
-    required this.monthlySpendEstimate,
+    required this.startingPlan,
     required this.currentStreakDays,
     required this.bestStreakDays,
     required this.reminderSettings,
@@ -60,7 +56,7 @@ class ProfileScreen extends StatelessWidget {
     required this.onOpenPreStoreMode,
     required this.onOpenRiskyPlaces,
     required this.onOpenLiveAlertRescueTest,
-    required this.onUpdateGoal,
+    required this.onUpdateStartingPlan,
   });
 
   void _openUrgeScriptsScreen(BuildContext context) {
@@ -71,10 +67,10 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _showEditGoalScreen(BuildContext context) async {
-    final result = await Navigator.of(context).push<String>(
-      MaterialPageRoute<String>(
-        builder: (_) => _EditGoalScreen(initialGoal: goal),
+  Future<void> _openStartingPlanEditor(BuildContext context) async {
+    final result = await Navigator.of(context).push<StartingPlan>(
+      MaterialPageRoute<StartingPlan>(
+        builder: (_) => StartingPlanEditorScreen(plan: startingPlan),
         fullscreenDialog: true,
       ),
     );
@@ -83,17 +79,12 @@ class ProfileScreen extends StatelessWidget {
       return;
     }
 
-    final nextGoal = result.trim();
-    if (nextGoal.isEmpty || nextGoal == goal) {
-      return;
-    }
-
-    onUpdateGoal(nextGoal);
+    onUpdateStartingPlan(result);
 
     if (context.mounted) {
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(
         const SnackBar(
-          content: Text('Current focus updated'),
+          content: Text('Starting Plan updated'),
         ),
       );
     }
@@ -520,7 +511,9 @@ class ProfileScreen extends StatelessWidget {
                 Text(
                   accountabilityPartner.hasName
                       ? accountabilityPartner.name
-                      : 'Set up accountability',
+                      : startingPlan.prefersPrivateSupport
+                          ? 'Private for now'
+                          : 'Set up accountability',
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
@@ -530,7 +523,9 @@ class ProfileScreen extends StatelessWidget {
                 Text(
                   accountabilityPartner.hasName
                       ? 'Save quick check-in, support, and progress-sharing messages for a trusted person.'
-                      : 'Save one trusted person and use ready-to-send support and accountability messages.',
+                      : startingPlan.prefersPrivateSupport
+                          ? 'Your Starting Plan says to keep support private for now. You can still add someone anytime.'
+                          : 'Save one trusted person and use ready-to-send support and accountability messages.',
                   style: const TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 14,
@@ -576,12 +571,12 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           AppCard(
-            onTap: () => _showEditGoalScreen(context),
+            onTap: () => _openStartingPlanEditor(context),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Current focus',
+                  'Starting Plan',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 13,
@@ -590,18 +585,45 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  goal,
+                  startingPlan.goal,
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Progress is still progress. Tap here to change this goal anytime.',
-                  style: TextStyle(
+                Text(
+                  '${startingPlan.frequencyPerWeek} purchase periods/week • about \$${startingPlan.averageSpend.toStringAsFixed(0)} each time',
+                  style: const TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Starting estimate: \$${startingPlan.estimatedMonthlySpend.toStringAsFixed(0)} per month',
+                  style: const TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 14,
+                  ),
+                ),
+                if (startingPlan.triggers.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Pull-ins: ${startingPlan.triggers.join(', ')}',
+                    style: const TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                const Text(
+                  'Tap to review or change your baseline, triggers, first rescue move, and support preference.',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -631,46 +653,6 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'Best: $bestStreakDays day${bestStreakDays == 1 ? '' : 's'}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: AppTheme.mutedText,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Starting baseline',
-                  style: TextStyle(
-                    color: AppTheme.mutedText,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '$frequencyPerWeek purchase periods per week',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'About \$${averageSpend.toStringAsFixed(0)} each time',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: AppTheme.mutedText,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Estimated starting monthly spend: \$${monthlySpendEstimate.toStringAsFixed(0)}',
                   style: const TextStyle(
                     fontSize: 16,
                     color: AppTheme.mutedText,
@@ -766,104 +748,6 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EditGoalScreen extends StatefulWidget {
-  final String initialGoal;
-
-  const _EditGoalScreen({
-    required this.initialGoal,
-  });
-
-  @override
-  State<_EditGoalScreen> createState() => _EditGoalScreenState();
-}
-
-class _EditGoalScreenState extends State<_EditGoalScreen> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.initialGoal);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _save() {
-    Navigator.of(context).pop(_controller.text.trim());
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit current focus'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text(
-            'Keep it short, honest, and useful for right now.',
-            style: TextStyle(
-              color: AppTheme.mutedText,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _controller,
-            maxLines: 2,
-            decoration: const InputDecoration(
-              labelText: 'Current focus',
-              hintText: 'Stop the spiral before the next ticket',
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              ActionChip(
-                label: const Text(
-                  'Stop the spiral before the next ticket',
-                ),
-                onPressed: () {
-                  _controller.text =
-                      'Stop the spiral before the next ticket';
-                },
-              ),
-              ActionChip(
-                label: const Text(
-                  'Cut lottery spending without white-knuckling it',
-                ),
-                onPressed: () {
-                  _controller.text =
-                      'Cut lottery spending without white-knuckling it';
-                },
-              ),
-              ActionChip(
-                label: const Text('Keep more cash for real life'),
-                onPressed: () {
-                  _controller.text = 'Keep more cash for real life';
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          AppButton(
-            label: 'Save focus',
-            icon: Icons.check_rounded,
-            onPressed: _save,
           ),
         ],
       ),

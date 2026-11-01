@@ -9,6 +9,7 @@ import '../models/purchase_log.dart';
 import '../models/risky_place.dart';
 import '../models/reminder_settings.dart';
 import '../models/spend_cap_plan.dart';
+import '../models/starting_plan.dart';
 import '../models/stop_reason.dart';
 import '../models/urge_session_log.dart';
 import '../models/weekly_reflection_archive_item.dart';
@@ -16,9 +17,11 @@ import '../models/weekly_reflection_archive_item.dart';
 class StoredAppState {
   final bool isOnboarded;
   final DateTime? startedAt;
-  final int frequencyPerWeek;
-  final double averageSpend;
-  final String goal;
+  final StartingPlan startingPlan;
+
+  int get frequencyPerWeek => startingPlan.frequencyPerWeek;
+  double get averageSpend => startingPlan.averageSpend;
+  String get goal => startingPlan.goal;
   final int urgesDefeated;
   final int legacyUrgeWinsBaseline;
   final List<PurchaseLog> logs;
@@ -36,9 +39,7 @@ class StoredAppState {
   const StoredAppState({
     required this.isOnboarded,
     required this.startedAt,
-    required this.frequencyPerWeek,
-    required this.averageSpend,
-    required this.goal,
+    required this.startingPlan,
     required this.urgesDefeated,
     required this.legacyUrgeWinsBaseline,
     required this.logs,
@@ -58,9 +59,7 @@ class StoredAppState {
     return StoredAppState(
       isOnboarded: false,
       startedAt: null,
-      frequencyPerWeek: 3,
-      averageSpend: 10,
-      goal: 'Spend less',
+      startingPlan: StartingPlan.defaults(),
       urgesDefeated: 0,
       legacyUrgeWinsBaseline: 0,
       logs: const <PurchaseLog>[],
@@ -84,6 +83,7 @@ class AppStorage {
   static const String _frequencyPerWeekKey = 'frequency_per_week';
   static const String _averageSpendKey = 'average_spend';
   static const String _goalKey = 'goal';
+  static const String _startingPlanKey = 'starting_plan_v1';
   static const String _urgesDefeatedKey = 'urges_defeated';
   static const String _legacyUrgeWinsBaselineKey =
       'legacy_urge_wins_baseline';
@@ -114,6 +114,25 @@ class AppStorage {
       final startedAtRaw = prefs.getString(_startedAtKey);
       final startedAt =
           startedAtRaw == null ? null : DateTime.tryParse(startedAtRaw);
+
+      final legacyStartingPlan = StartingPlan.fromLegacy(
+        frequencyPerWeek: prefs.getInt(_frequencyPerWeekKey) ?? 3,
+        averageSpend: prefs.getDouble(_averageSpendKey) ?? 10,
+        goal: prefs.getString(_goalKey) ?? 'Spend less',
+      );
+
+      var startingPlan = legacyStartingPlan;
+      final startingPlanRaw = prefs.getString(_startingPlanKey);
+      if (startingPlanRaw != null) {
+        try {
+          startingPlan = StartingPlan.fromJson(
+            jsonDecode(startingPlanRaw) as Map<String, dynamic>,
+            fallback: legacyStartingPlan,
+          );
+        } catch (_) {
+          startingPlan = legacyStartingPlan;
+        }
+      }
 
       final rawLogs = prefs.getStringList(_logsKey) ?? <String>[];
       final logs = rawLogs.map((raw) {
@@ -196,9 +215,7 @@ class AppStorage {
       return StoredAppState(
         isOnboarded: prefs.getBool(_isOnboardedKey) ?? false,
         startedAt: startedAt,
-        frequencyPerWeek: prefs.getInt(_frequencyPerWeekKey) ?? 3,
-        averageSpend: prefs.getDouble(_averageSpendKey) ?? 10,
-        goal: prefs.getString(_goalKey) ?? 'Spend less',
+        startingPlan: startingPlan,
         urgesDefeated: storedUrgesDefeated,
         legacyUrgeWinsBaseline: legacyUrgeWinsBaseline,
         logs: logs,
@@ -247,6 +264,10 @@ class AppStorage {
       await prefs.remove(_startedAtKey);
     }
 
+    await prefs.setString(
+      _startingPlanKey,
+      jsonEncode(state.startingPlan.toJson()),
+    );
     await prefs.setInt(_frequencyPerWeekKey, state.frequencyPerWeek);
     await prefs.setDouble(_averageSpendKey, state.averageSpend);
     await prefs.setString(_goalKey, state.goal);

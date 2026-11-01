@@ -99,6 +99,12 @@ jobs:
       - name: Verify SL-80A signing plumbing
         run: python tools/verify_sl80a.py --ci
 
+      - name: Test SL-81A Starting Plan
+        run: flutter test test/starting_plan_test.dart test/starting_plan_urge_mode_test.dart
+
+      - name: Verify SL-81A Starting Plan contract
+        run: python tools/verify_sl81a.py --ci
+
       - name: Prepare Store signing posture
         shell: bash
         env:

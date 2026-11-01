@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../app/app_theme.dart';
 import '../../core/models/accountability_partner.dart';
 import '../../core/models/stop_reason.dart';
+import '../../core/models/starting_plan.dart';
 import '../../core/models/urge_session_log.dart';
 import '../../core/services/accountability_message_service.dart';
 import '../../core/services/money_converter_service.dart';
@@ -15,7 +16,7 @@ import '../../shared/widgets/app_card.dart';
 import 'urge_scripts_screen.dart';
 
 class UrgeModeScreen extends StatefulWidget {
-  final double averageSpend;
+  final StartingPlan startingPlan;
   final ValueChanged<UrgeSessionLog> onComplete;
   final VoidCallback onStartPremiumTrial;
   final bool shouldShowSuccessPremiumPrompt;
@@ -30,7 +31,7 @@ class UrgeModeScreen extends StatefulWidget {
 
   const UrgeModeScreen({
     super.key,
-    required this.averageSpend,
+    required this.startingPlan,
     required this.onComplete,
     required this.onStartPremiumTrial,
     required this.shouldShowSuccessPremiumPrompt,
@@ -52,7 +53,7 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
   final DateTime _openedAt = DateTime.now();
   int _secondsLeft = 20;
   bool _completed = false;
-  String _selectedScriptId = UrgeScriptService.defaultScript.id;
+  late String _selectedScriptId;
   bool _openedFullUrgeScript = false;
   bool _usedCopingStrategies = false;
   bool _usedNearMissEducation = false;
@@ -67,6 +68,8 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedScriptId = widget.startingPlan.preferredUrgeScriptId ??
+        UrgeScriptService.defaultScript.id;
     _tick();
   }
 
@@ -237,7 +240,8 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
         ? _starterReasons
         : widget.reasons.take(3).map((reason) => reason.text).toList();
 
-    final converterReport = MoneyConverterService.build(widget.averageSpend);
+    final converterReport =
+        MoneyConverterService.build(widget.startingPlan.averageSpend);
     final previewComparisons = converterReport.comparisons.take(3).toList();
 
     final supportNowMessage =
@@ -299,6 +303,89 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
             ),
           ),
           const SizedBox(height: 12),
+          if (widget.startingPlan.triggers.isNotEmpty ||
+              widget.startingPlan.preferredRescue != null)
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Your Starting Plan',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (widget.startingPlan.triggers.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Known pull-ins: ${widget.startingPlan.triggers.join(', ')}',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                  if (widget.startingPlan.preferredRescue != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Preferred first move: ${widget.startingPlan.preferredRescue}',
+                      style: const TextStyle(
+                        color: AppTheme.mutedText,
+                        fontSize: 14,
+                      ),
+                    ),
+                    if (widget.startingPlan.preferredRescue ==
+                            'Texting someone I trust') ...[
+                      const SizedBox(height: 12),
+                      AppButton(
+                        label: 'Open accountability',
+                        icon: Icons.person_rounded,
+                        isPrimary: false,
+                        onPressed: _openAccountability,
+                      ),
+                    ] else if (widget.startingPlan.preferredRescue ==
+                            'A quick breathing reset' ||
+                        widget.startingPlan.preferredRescue ==
+                            'A replacement activity') ...[
+                      const SizedBox(height: 12),
+                      AppButton(
+                        label: 'Open coping strategies',
+                        icon: Icons.psychology_rounded,
+                        isPrimary: false,
+                        onPressed: _openCopingStrategies,
+                      ),
+                    ] else if (widget.startingPlan.preferredRescue ==
+                        'A delay timer') ...[
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Stay with the pause above. Delay the decision before doing anything else.',
+                        style: TextStyle(
+                          color: AppTheme.mutedText,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ] else if (widget.startingPlan.preferredRescue ==
+                        'My reasons to stop') ...[
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Your saved reasons are waiting below in this urge flow.',
+                        style: TextStyle(
+                          color: AppTheme.mutedText,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ],
+                ],
+              ),
+            ),
+          if (widget.startingPlan.triggers.isNotEmpty ||
+              widget.startingPlan.preferredRescue != null)
+            const SizedBox(height: 12),
           AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -313,7 +400,7 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '\$${widget.averageSpend.toStringAsFixed(0)}',
+                  '\$${widget.startingPlan.averageSpend.toStringAsFixed(0)}',
                   style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.w900,
@@ -398,7 +485,32 @@ class _UrgeModeScreenState extends State<UrgeModeScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                if (!hasTrustedPerson) ...[
+                if (!hasTrustedPerson &&
+                    widget.startingPlan.prefersPrivateSupport) ...[
+                  const Text(
+                    'Private support for now',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Your Starting Plan says to keep this private for now. ScratchLess will not push you to add a trusted person during an urge.',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: _openAccountability,
+                      child: const Text('Open accountability tools anyway'),
+                    ),
+                  ),
+                ] else if (!hasTrustedPerson) ...[
                   const Text(
                     'No trusted person set yet.',
                     style: TextStyle(

@@ -7,6 +7,7 @@ import '../core/models/purchase_log.dart';
 import '../core/models/risky_place.dart';
 import '../core/models/reminder_settings.dart';
 import '../core/models/spend_cap_plan.dart';
+import '../core/models/starting_plan.dart';
 import '../core/models/stop_reason.dart';
 import '../core/models/urge_session_log.dart';
 import '../core/models/weekly_reflection_archive_item.dart';
@@ -41,9 +42,9 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
   bool _isOnboarded = false;
   DateTime? _startedAt;
 
-  int _frequencyPerWeek = 3;
-  double _averageSpend = 10;
-  String _goal = 'Spend less';
+  StartingPlan _startingPlan = StartingPlan.defaults();
+
+  double get _averageSpend => _startingPlan.averageSpend;
 
   int _legacyUrgeWinsBaseline = 0;
   List<PurchaseLog> _logs = <PurchaseLog>[];
@@ -66,9 +67,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     _bootstrap();
   }
 
-  double get _monthlySpendEstimate {
-    return _frequencyPerWeek * _averageSpend * 4.33;
-  }
+  double get _monthlySpendEstimate => _startingPlan.estimatedMonthlySpend;
 
   int get _urgesDefeated {
     final explicitWins =
@@ -152,9 +151,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
       _isLoading = false;
       _isOnboarded = stored.isOnboarded;
       _startedAt = stored.startedAt;
-      _frequencyPerWeek = stored.frequencyPerWeek;
-      _averageSpend = stored.averageSpend;
-      _goal = stored.goal;
+      _startingPlan = stored.startingPlan;
       _legacyUrgeWinsBaseline = stored.legacyUrgeWinsBaseline;
       _logs = stored.logs;
       _reminderSettings = stored.reminderSettings;
@@ -178,9 +175,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
       StoredAppState(
         isOnboarded: _isOnboarded,
         startedAt: _startedAt,
-        frequencyPerWeek: _frequencyPerWeek,
-        averageSpend: _averageSpend,
-        goal: _goal,
+        startingPlan: _startingPlan,
         urgesDefeated: _urgesDefeated,
         legacyUrgeWinsBaseline: _legacyUrgeWinsBaseline,
         logs: _logs,
@@ -217,9 +212,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     setState(() {
       _isOnboarded = true;
       _startedAt = DateTime.now();
-      _frequencyPerWeek = result.frequencyPerWeek;
-      _averageSpend = result.averageSpend;
-      _goal = result.goal;
+      _startingPlan = result.startingPlan;
     });
 
     _persistState();
@@ -503,14 +496,9 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     _persistState();
   }
 
-  void _updateGoal(String goal) {
-    final nextGoal = goal.trim();
-    if (nextGoal.isEmpty) {
-      return;
-    }
-
+  void _updateStartingPlan(StartingPlan plan) {
     setState(() {
-      _goal = nextGoal;
+      _startingPlan = plan;
     });
 
     _persistState();
@@ -623,7 +611,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     await navigator.push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => UrgeModeScreen(
-          averageSpend: _averageSpend,
+          startingPlan: _startingPlan,
           onComplete: _completeDetailedUrgeSession,
           onStartPremiumTrial: _startPremiumTrial,
           shouldShowSuccessPremiumPrompt: PremiumPromptService.canShow(
@@ -715,12 +703,10 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
                   currentStreakDays: _currentStreakDays,
                   bestStreakDays: _bestStreakDays,
                   urgesDefeated: _urgesDefeated,
-                  frequencyPerWeek: _frequencyPerWeek,
-                  averageSpend: _averageSpend,
+                  startingPlan: _startingPlan,
                   estimatedCashKept: _estimatedCashKept,
                   totalSpent: _totalSpent,
                   monthlySpendEstimate: _monthlySpendEstimate,
-                  goal: _goal,
                   logs: _logs,
                   urgeSessions: _urgeSessions,
                   reminderSettings: _reminderSettings,
@@ -770,7 +756,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
                   onEditRiskyPlace: _editRiskyPlace,
                   onDeleteRiskyPlace: _deleteRiskyPlace,
                   onCelebrateMilestone: _celebrateMilestone,
-                  onUpdateGoal: _updateGoal,
+                  onUpdateStartingPlan: _updateStartingPlan,
                 )
               : OnboardingScreen(
                   onComplete: _completeOnboarding,

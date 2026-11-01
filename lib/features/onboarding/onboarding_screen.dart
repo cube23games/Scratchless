@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../app/app_theme.dart';
+import '../../core/models/starting_plan.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
 
 class OnboardingResult {
-  final int frequencyPerWeek;
-  final double averageSpend;
-  final String goal;
+  final StartingPlan startingPlan;
 
   const OnboardingResult({
-    required this.frequencyPerWeek,
-    required this.averageSpend,
-    required this.goal,
+    required this.startingPlan,
   });
 }
 
@@ -123,16 +120,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
   ];
 
-  final List<String> _triggerOptions = const [
-    'Payday',
-    'Gas station stops',
-    'Store displays',
-    'Stress',
-    'Boredom',
-    'Loneliness',
-    'Chasing losses',
-    'Habit / routine',
-  ];
+  final List<String> _triggerOptions = StartingPlan.triggerOptions;
 
   final List<_ChoiceOption<String>> _rescueOptions = const [
     _ChoiceOption(
@@ -181,9 +169,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   double get _estimatedYearlySpend => _estimatedMonthlySpend * 12;
 
   OnboardingResult get _result => OnboardingResult(
-        frequencyPerWeek: _frequencyPerWeek,
-        averageSpend: _averageSpend,
-        goal: _goal,
+        startingPlan: StartingPlan(
+          problemFit: _problemFit,
+          goal: _goal,
+          frequencyPerWeek: _frequencyPerWeek,
+          averageSpend: _averageSpend,
+          triggers: _triggerSelections.toList(),
+          preferredRescue: _rescuePlan,
+          supportPreference: _privacyPreference,
+        ),
       );
 
   void _finishOnboarding() {
@@ -679,6 +673,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                 ),
               ],
+              const SizedBox(height: 8),
+              Text(
+                'Preferred first move: $_rescuePlan',
+                style: const TextStyle(
+                  color: AppTheme.mutedText,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Support preference: $_privacyPreference',
+                style: const TextStyle(
+                  color: AppTheme.mutedText,
+                  fontSize: 14,
+                ),
+              ),
               const SizedBox(height: 8),
               const Text(
                 'You can adjust your answers later. Real logging will make the app smarter over time.',
