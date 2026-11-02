@@ -61,7 +61,7 @@ class HelpScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Use this screen when the urge feels bigger than your usual tools.',
+                  'Reach a person when your own tools are not enough.',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
@@ -69,7 +69,7 @@ class HelpScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Help is available for scratch-off and lottery-related gambling problems too. Start with whichever option feels easiest right now.',
+                  'Scratch-off and lottery problems count as gambling problems. You can ask for support before things get worse.',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 14,
@@ -79,63 +79,88 @@ class HelpScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          AppButton(
-            label: 'Call 1-800-MY-RESET',
-            icon: Icons.call_rounded,
-            onPressed: () {
-              _launchOrFallback(
-                context: context,
-                action: SupportLinkService.launchCall,
-                fallbackText: '1-800-MY-RESET',
-                failureMessage: 'Could not open the dialer. Copied 1-800-MY-RESET.',
-              );
-            },
-          ),
-          const SizedBox(height: 10),
-          AppButton(
-            label: 'Text 800GAM',
-            icon: Icons.sms_rounded,
-            isPrimary: false,
-            onPressed: () {
-              _launchOrFallback(
-                context: context,
-                action: SupportLinkService.launchText,
-                fallbackText: '800GAM',
-                failureMessage: 'Could not open messaging. Copied 800GAM.',
-              );
-            },
-          ),
-          const SizedBox(height: 10),
-          AppButton(
-            label: 'Open live chat',
-            icon: Icons.chat_bubble_rounded,
-            isPrimary: false,
-            onPressed: () {
-              _launchOrFallback(
-                context: context,
-                action: SupportLinkService.launchChat,
-                fallbackText: 'https://www.ncpgambling.org/chat/',
-                failureMessage: 'Could not open chat. Copied the chat link.',
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-          const AppCard(
+          AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Quick options',
+                const Text(
+                  'Gambling support',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                SizedBox(height: 10),
-                _BulletLine('Call if you want a human voice right now'),
-                _BulletLine('Text if speaking feels like too much'),
-                _BulletLine('Chat if you want a private typed conversation'),
+                const SizedBox(height: 8),
+                const Text(
+                  'National Problem Gambling Helpline',
+                  style: TextStyle(
+                    fontSize: 21,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Call, text, or chat 24/7/365 for gambling-related support, information, and local referrals.',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'This helpline is for gambling support. It is not an emergency crisis line.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                AppButton(
+                  label: 'Call 1-800-MY-RESET',
+                  icon: Icons.call_rounded,
+                  onPressed: () {
+                    _launchOrFallback(
+                      context: context,
+                      action: SupportLinkService.launchCall,
+                      fallbackText:
+                          SupportLinkService.gamblingDisplayNumber,
+                      failureMessage:
+                          'Could not open the dialer. Copied 1-800-MY-RESET.',
+                    );
+                  },
+                ),
+                const SizedBox(height: 10),
+                AppButton(
+                  label: 'Text 1-800-MY-RESET',
+                  icon: Icons.sms_rounded,
+                  isPrimary: false,
+                  onPressed: () {
+                    _launchOrFallback(
+                      context: context,
+                      action: SupportLinkService.launchText,
+                      fallbackText:
+                          SupportLinkService.gamblingDisplayNumber,
+                      failureMessage:
+                          'Could not open messaging. Copied 1-800-MY-RESET.',
+                    );
+                  },
+                ),
+                const SizedBox(height: 10),
+                AppButton(
+                  label: 'Open live chat',
+                  icon: Icons.chat_bubble_rounded,
+                  isPrimary: false,
+                  onPressed: () {
+                    _launchOrFallback(
+                      context: context,
+                      action: SupportLinkService.launchChat,
+                      fallbackText: SupportLinkService.chatUri.toString(),
+                      failureMessage:
+                          'Could not open chat. Copied the chat link.',
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -145,7 +170,92 @@ class HelpScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'More support',
+                  'Crisis or immediate danger',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Use crisis support when this is bigger than a gambling urge.',
+                  style: TextStyle(
+                    fontSize: 21,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'If you are in emotional distress, thinking about suicide, or need someone to talk with right now, call or text 988.',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'If you or someone else is in immediate physical danger or has a medical emergency, call 911.',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                AppButton(
+                  label: 'Call 988',
+                  icon: Icons.health_and_safety_rounded,
+                  isPrimary: false,
+                  onPressed: () {
+                    _launchOrFallback(
+                      context: context,
+                      action: SupportLinkService.launch988Call,
+                      fallbackText: SupportLinkService.crisis988Display,
+                      failureMessage:
+                          'Could not open the dialer. Copied 988.',
+                    );
+                  },
+                ),
+                const SizedBox(height: 10),
+                AppButton(
+                  label: 'Text 988',
+                  icon: Icons.sms_rounded,
+                  isPrimary: false,
+                  onPressed: () {
+                    _launchOrFallback(
+                      context: context,
+                      action: SupportLinkService.launch988Text,
+                      fallbackText: SupportLinkService.crisis988Display,
+                      failureMessage:
+                          'Could not open messaging. Copied 988.',
+                    );
+                  },
+                ),
+                const SizedBox(height: 10),
+                AppButton(
+                  label: 'Call 911',
+                  icon: Icons.emergency_rounded,
+                  isPrimary: false,
+                  onPressed: () {
+                    _launchOrFallback(
+                      context: context,
+                      action: SupportLinkService.launch911Call,
+                      fallbackText: SupportLinkService.emergency911Display,
+                      failureMessage:
+                          'Could not open the dialer. Copied 911.',
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'More gambling-support resources',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 13,
@@ -162,7 +272,7 @@ class HelpScreen extends StatelessWidget {
                       context: context,
                       action: SupportLinkService.launchHelpByState,
                       fallbackText:
-                          'https://www.ncpgambling.org/help-treatment/help-by-state/',
+                          SupportLinkService.helpByStateUri.toString(),
                       failureMessage:
                           'Could not open state help. Copied the state help link.',
                     );
@@ -178,49 +288,13 @@ class HelpScreen extends StatelessWidget {
                       context: context,
                       action: SupportLinkService.launchHelpHome,
                       fallbackText:
-                          'https://www.ncpgambling.org/help-treatment/',
+                          SupportLinkService.helpHomeUri.toString(),
                       failureMessage:
                           'Could not open help resources. Copied the help link.',
                     );
                   },
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BulletLine extends StatelessWidget {
-  final String text;
-
-  const _BulletLine(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 5),
-            child: Icon(
-              Icons.circle,
-              size: 8,
-              color: AppTheme.accent,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
             ),
           ),
         ],

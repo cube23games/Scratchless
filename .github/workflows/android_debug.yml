@@ -105,6 +105,12 @@ jobs:
       - name: Verify SL-81A Starting Plan contract
         run: python tools/verify_sl81a.py --ci
 
+      - name: Test SL-81B help and safety accuracy
+        run: flutter test test/help_safety_accuracy_test.dart
+
+      - name: Verify SL-81B help and safety contract
+        run: python tools/verify_sl81b.py --ci
+
       - name: Prepare Store signing posture
         shell: bash
         env:
