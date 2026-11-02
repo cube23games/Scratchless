@@ -59,10 +59,10 @@ void main() {
       expect(find.text('Call 1-800-MY-RESET'), findsOneWidget);
 
       await tester.scrollUntilVisible(
-        find.text('Text 800GAM'),
+        find.text('Text 1-800-MY-RESET'),
         200,
       );
-      expect(find.text('Text 800GAM'), findsOneWidget);
+      expect(find.text('Text 1-800-MY-RESET'), findsOneWidget);
 
       await tester.scrollUntilVisible(
         find.text('Open live chat'),
