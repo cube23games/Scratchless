@@ -19,13 +19,22 @@ class LocationPermissionPlan {
 }
 
 class LocationPermissionPlanService {
+  static const String backgroundDisclosureTitle =
+      'Background location for Live Risky Places';
+
+  static const String backgroundDisclosureBody =
+      'ScratchLess accesses location data to enable Live Risky Place alerts even when the app is closed or not in use. Your location is compared with risky places you choose so ScratchLess can alert you before a risky stop. ScratchLess does not use location for advertising.';
+
+  static const String locationPrivacySummary =
+      'Live Risky Places uses location only for places you choose. Background location lets alerts work when ScratchLess is closed or not in use. You can leave background location off and still use ScratchLess without live place alerts.';
+
   static LocationPermissionPlan premiumPlaceAlertsPlan() {
     return const LocationPermissionPlan(
       stage: LocationPermissionStage.backgroundForPlaceAlerts,
-      headline: 'Location permission will come later',
+      headline: 'Live Risky Places uses background location',
       body:
-          'ScratchLess will first explain why place alerts help, then ask for location only when you choose live place alerts. Background access will be requested only for persistent place-based warnings.',
-      nextStepLabel: 'Premium live place alerts',
+          backgroundDisclosureBody,
+      nextStepLabel: 'Review location access',
     );
   }
 

@@ -7,6 +7,7 @@ import '../../core/models/premium_state.dart';
 import '../../core/models/risky_place.dart';
 import '../../core/services/distance_formatter_service.dart';
 import '../../core/services/live_place_alert_service.dart';
+import '../../core/services/location_permission_plan_service.dart';
 import '../../core/services/place_search_service.dart';
 import 'place_search_screen.dart';
 import 'place_pin_confirm_screen.dart';
@@ -14,6 +15,7 @@ import 'widgets/place_map_preview.dart';
 import '../../core/services/risky_time_service.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
+import '../privacy/privacy_screen.dart';
 
 class RiskyPlacesScreen extends StatefulWidget {
   final List<RiskyPlace> places;
@@ -282,7 +284,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
     }
 
     if (blocker == 'Finish live alerts in Android settings') {
-      await LivePlaceAlertService.instance.openAppSettings();
+      await _openAndroidLocationSettings();
 
       if (mounted) {
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
@@ -809,7 +811,72 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
     return hasConfiguredPlace && _debugState.accessLevel != 'fullBackground';
   }
 
+  Future<bool> _showBackgroundLocationDisclosure() async {
+    final decision = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text(
+            LocationPermissionPlanService.backgroundDisclosureTitle,
+          ),
+          content: const SingleChildScrollView(
+            child: Text(
+              LocationPermissionPlanService.backgroundDisclosureBody,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Not now'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Continue'),
+            ),
+          ],
+        );
+      },
+    );
+
+    return decision == true;
+  }
+
   Future<void> _openAndroidLocationSettings() async {
+    final disclosed = await _showBackgroundLocationDisclosure();
+    if (!disclosed || !mounted) {
+      return;
+    }
+
+    await widget.onEnableLivePlaceAlertsBackground();
+    await _refreshLiveAlertDebugState();
+
+    if (!mounted) {
+      return;
+    }
+
+    if (_debugState.accessLevel == 'fullBackground') {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Background location is already ready — live alerts can stay armed.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (_debugState.accessLevel != 'foregroundOnly') {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Location was not granted. Live Risky Place alerts remain off.',
+          ),
+        ),
+      );
+      return;
+    }
+
     await LivePlaceAlertService.instance.openAppSettings();
 
     if (!mounted) {
@@ -1378,6 +1445,51 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
               ],
             ),
           ),
+          const SizedBox(height: 12),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Location & privacy',
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Your risky places stay your choice',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  LocationPermissionPlanService.locationPrivacySummary,
+                  style: TextStyle(
+                    color: AppTheme.mutedText,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                AppButton(
+                  label: 'Review privacy policy',
+                  icon: Icons.privacy_tip_outlined,
+                  isPrimary: false,
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ScratchLessPrivacyScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
           if (_needsBackgroundPermissionWalkthrough()) ...[
             const SizedBox(height: 12),
             AppCard(
@@ -1620,7 +1732,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                     icon: Icons.arrow_forward_rounded,
                     onPressed: () async {
                       if (_primarySetupState(highlightedPlace) == 'Almost ready') {
-                        await LivePlaceAlertService.instance.openAppSettings();
+                        await _openAndroidLocationSettings();
 
                         if (mounted) {
                           ScaffoldMessenger.maybeOf(context)?.showSnackBar(
