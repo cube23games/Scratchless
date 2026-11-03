@@ -5,6 +5,47 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val qaKeystorePath =
+    providers.environmentVariable("SCRATCHLESS_QA_KEYSTORE_PATH").orNull.orEmpty()
+val qaKeystorePassword =
+    providers.environmentVariable("SCRATCHLESS_QA_KEYSTORE_PASSWORD").orNull.orEmpty()
+val qaKeyAlias =
+    providers.environmentVariable("SCRATCHLESS_QA_KEY_ALIAS").orNull.orEmpty()
+val qaKeyPassword =
+    providers.environmentVariable("SCRATCHLESS_QA_KEY_PASSWORD").orNull.orEmpty()
+
+val qaSigningValues = listOf(
+    qaKeystorePath,
+    qaKeystorePassword,
+    qaKeyAlias,
+    qaKeyPassword,
+)
+val configuredQaSigningValues = qaSigningValues.count { it.isNotEmpty() }
+val hasCompleteQaSigning = configuredQaSigningValues == qaSigningValues.size
+
+val isQaReleaseRequested = gradle.startParameter.taskNames.any { taskName ->
+    val normalized = taskName.lowercase()
+    normalized.contains("qa") && normalized.contains("release")
+}
+
+if (isQaReleaseRequested && configuredQaSigningValues in 1 until qaSigningValues.size) {
+    throw GradleException(
+        "Incomplete ScratchLess QA signing configuration. Provide every QA signing value.",
+    )
+}
+
+if (isQaReleaseRequested && !hasCompleteQaSigning) {
+    throw GradleException(
+        "ScratchLess QA release signing is not configured. Stable QA release builds fail closed.",
+    )
+}
+
+if (isQaReleaseRequested && hasCompleteQaSigning && !file(qaKeystorePath).isFile) {
+    throw GradleException(
+        "ScratchLess QA keystore file does not exist at the configured path.",
+    )
+}
+
 val storeKeystorePath =
     providers.environmentVariable("SCRATCHLESS_STORE_KEYSTORE_PATH").orNull.orEmpty()
 val storeKeystorePassword =
@@ -88,6 +129,15 @@ android {
     }
 
     signingConfigs {
+        if (hasCompleteQaSigning) {
+            create("qaRelease") {
+                storeFile = file(qaKeystorePath)
+                storePassword = qaKeystorePassword
+                keyAlias = qaKeyAlias
+                keyPassword = qaKeyPassword
+            }
+        }
+
         if (hasCompleteStoreSigning) {
             create("storeRelease") {
                 storeFile = file(storeKeystorePath)
@@ -108,7 +158,11 @@ android {
             resValue("string", "app_name", "ScratchLess QA")
             manifestPlaceholders["appIcon"] =
                 "@drawable/ic_launcher_qa"
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasCompleteQaSigning) {
+                signingConfigs.getByName("qaRelease")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
 
         create("store") {
@@ -127,8 +181,9 @@ android {
     buildTypes {
         release {
             // Distribution flavors own their signing configuration.
-            // QA stays debug-signed. Store is either explicitly candidate-debug
-            // or uses the secret-fed Store release signing config.
+            // QA release builds use the dedicated stable QA signing key.
+            // Store is either explicitly candidate-debug or uses the
+            // secret-fed Store release signing config.
         }
     }
 

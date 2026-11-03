@@ -111,6 +111,40 @@ jobs:
       - name: Verify SL-81B help and safety contract
         run: python tools/verify_sl81b.py --ci
 
+      - name: Verify SL-81B stable QA signing contract
+        run: python tools/verify_sl81b_qa_signing.py --ci
+
+      - name: Prepare QA signing posture
+        shell: bash
+        env:
+          SCRATCHLESS_QA_KEYSTORE_B64: ${{ secrets.SCRATCHLESS_QA_KEYSTORE_B64 }}
+          SCRATCHLESS_QA_KEYSTORE_PASSWORD: ${{ secrets.SCRATCHLESS_QA_KEYSTORE_PASSWORD }}
+          SCRATCHLESS_QA_KEY_ALIAS: ${{ secrets.SCRATCHLESS_QA_KEY_ALIAS }}
+          SCRATCHLESS_QA_KEY_PASSWORD: ${{ secrets.SCRATCHLESS_QA_KEY_PASSWORD }}
+          SCRATCHLESS_QA_CERT_SHA256: ${{ secrets.SCRATCHLESS_QA_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          present=0
+          for value in \
+            "$SCRATCHLESS_QA_KEYSTORE_B64" \
+            "$SCRATCHLESS_QA_KEYSTORE_PASSWORD" \
+            "$SCRATCHLESS_QA_KEY_ALIAS" \
+            "$SCRATCHLESS_QA_KEY_PASSWORD" \
+            "$SCRATCHLESS_QA_CERT_SHA256"
+          do
+            if [ -n "$value" ]; then present=$((present + 1)); fi
+          done
+          if [ "$present" -ne 5 ]; then
+            echo "Complete stable QA signing secrets are required; refusing to build."
+            exit 1
+          fi
+          keystore="$RUNNER_TEMP/scratchless-qa.jks"
+          printf '%s' "$SCRATCHLESS_QA_KEYSTORE_B64" | base64 --decode > "$keystore"
+          test -s "$keystore"
+          chmod 600 "$keystore"
+          echo "SCRATCHLESS_QA_KEYSTORE_PATH=$keystore" >> "$GITHUB_ENV"
+          echo "Stable QA signing material is available."
+
       - name: Prepare Store signing posture
         shell: bash
         env:
@@ -164,6 +198,9 @@ jobs:
       - name: Build QA release APK
         env:
           GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+          SCRATCHLESS_QA_KEYSTORE_PASSWORD: ${{ secrets.SCRATCHLESS_QA_KEYSTORE_PASSWORD }}
+          SCRATCHLESS_QA_KEY_ALIAS: ${{ secrets.SCRATCHLESS_QA_KEY_ALIAS }}
+          SCRATCHLESS_QA_KEY_PASSWORD: ${{ secrets.SCRATCHLESS_QA_KEY_PASSWORD }}
         run: >
           flutter build apk
           --flavor qa
@@ -240,6 +277,26 @@ jobs:
           cp "$store_aab" dist/scratchless-store.aab
 
           ls -lh dist
+
+      - name: Verify QA signing posture
+        shell: bash
+        env:
+          SCRATCHLESS_QA_CERT_SHA256: ${{ secrets.SCRATCHLESS_QA_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+          apksigner_bin="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner -print | sort -V | tail -1)"
+          test -n "$apksigner_bin"
+          test -x "$apksigner_bin"
+          "$apksigner_bin" verify --print-certs dist/scratchless-qa.apk > dist/qa-signing.txt 2>&1
+          actual="$(awk '{ lower=tolower($0); if (lower ~ /certificate/ && lower ~ /sha-256/ && lower ~ /digest/) { print $NF; exit } }' dist/qa-signing.txt | tr -d '[:space:]:' | tr '[:upper:]' '[:lower:]')"
+          expected="$(printf '%s' "$SCRATCHLESS_QA_CERT_SHA256" | tr -d '[:space:]:' | tr '[:upper:]' '[:lower:]')"
+          echo "QA certificate SHA256=$actual"
+          test -n "$actual"
+          test -n "$expected"
+          if [ "$actual" != "$expected" ]; then echo "QA signing certificate digest mismatch."; exit 1; fi
+          if grep -Fqi "CN=Android Debug" dist/qa-signing.txt; then echo "Stable QA build unexpectedly uses Android Debug signing."; exit 1; fi
+          { echo "mode=stable-qa"; echo "certificate_sha256=$actual"; } > dist/qa-signing-mode.txt
+          echo "QA APK verified with dedicated stable QA certificate."
 
       - name: Verify Store signing posture
         shell: bash
@@ -441,6 +498,15 @@ jobs:
         with:
           name: scratchless-qa-apk
           path: dist/scratchless-qa.apk
+          if-no-files-found: error
+
+      - name: Upload QA signing metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: scratchless-qa-signing-metadata
+          path: |
+            dist/qa-signing.txt
+            dist/qa-signing-mode.txt
           if-no-files-found: error
 
       - name: Upload Store APK
