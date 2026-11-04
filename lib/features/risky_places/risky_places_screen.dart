@@ -22,7 +22,7 @@ class RiskyPlacesScreen extends StatefulWidget {
   final PremiumState premiumState;
   final RiskyTimeInsight riskyTimeInsight;
   final VoidCallback onStartPremiumTrial;
-  final Future<String> Function() onEnableLivePlaceAlertsBackground;
+  final Future<String> Function() onEnableLivePlaceAlertsForeground;
   final ValueChanged<RiskyPlace> onAddPlace;
   final ValueChanged<RiskyPlace> onEditPlace;
   final void Function(String id) onDeletePlace;
@@ -33,7 +33,7 @@ class RiskyPlacesScreen extends StatefulWidget {
     required this.premiumState,
     required this.riskyTimeInsight,
     required this.onStartPremiumTrial,
-    required this.onEnableLivePlaceAlertsBackground,
+    required this.onEnableLivePlaceAlertsForeground,
     required this.onAddPlace,
     required this.onEditPlace,
     required this.onDeletePlace,
@@ -617,7 +617,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
 
   String _highlightedPlaceReason(RiskyPlace place) {
     if (_primarySetupState(place) == 'Almost ready') {
-      return 'Open Android settings to finish this place.';
+      return 'Finish Android location access in the setup card above.';
     }
 
     if (place.isTopRisk) {
@@ -634,7 +634,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
       case 'Live alerts off':
         return 'Turn on live alerts';
       case 'Almost ready':
-        return 'Open Android settings';
+        return 'Use setup above';
       case 'Premium needed':
         return 'Open place';
       default:
@@ -848,7 +848,7 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
       return;
     }
 
-    await widget.onEnableLivePlaceAlertsBackground();
+    await widget.onEnableLivePlaceAlertsForeground();
     await _refreshLiveAlertDebugState();
 
     if (!mounted) {
@@ -1726,29 +1726,23 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
                       fontSize: 13,
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  AppButton(
-                    label: _highlightedPlaceCtaLabel(highlightedPlace),
-                    icon: Icons.arrow_forward_rounded,
-                    onPressed: () async {
-                      if (_primarySetupState(highlightedPlace) == 'Almost ready') {
-                        await _openAndroidLocationSettings();
-
-                        if (mounted) {
-                          ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Android settings opened. Allow location all the time, then come back here.',
-                              ),
-                            ),
-                          );
-                        }
-                        return;
-                      }
-
-                      await _openEditPlace(context, highlightedPlace);
-                    },
-                  ),
+                  if (_primarySetupState(highlightedPlace) != 'Almost ready') ...[
+                    const SizedBox(height: 10),
+                    AppButton(
+                      label: _highlightedPlaceCtaLabel(highlightedPlace),
+                      icon: Icons.arrow_forward_rounded,
+                      onPressed: () => _openEditPlace(context, highlightedPlace),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Use the “Finish Android location access” card above to complete this permission once for all live risky places.',
+                      style: TextStyle(
+                        color: AppTheme.mutedText,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

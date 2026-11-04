@@ -6,12 +6,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 ALLOWED = {
-    ".github/workflows/android_debug.yml",
-    "docs/google_play/sl81c_background_location_submission.md",
-    "lib/core/services/location_permission_plan_service.dart",
-    "lib/features/privacy/privacy_screen.dart",
+    "lib/features/home/home_shell.dart",
     "lib/features/risky_places/risky_places_screen.dart",
-    "test/sl81c_location_privacy_test.dart",
     "tools/verify_sl81c.py",
 }
 
@@ -53,6 +49,7 @@ def main() -> None:
     manifest = (ROOT / "android/app/src/main/AndroidManifest.xml").read_text()
     plan = (ROOT / "lib/core/services/location_permission_plan_service.dart").read_text()
     risky = (ROOT / "lib/features/risky_places/risky_places_screen.dart").read_text()
+    home = (ROOT / "lib/features/home/home_shell.dart").read_text()
     privacy = (ROOT / "lib/features/privacy/privacy_screen.dart").read_text()
     docs = (ROOT / "docs/google_play/sl81c_background_location_submission.md").read_text()
     workflow = (ROOT / ".github/workflows/android_debug.yml").read_text()
@@ -78,7 +75,7 @@ def main() -> None:
         "_showBackgroundLocationDisclosure",
         "Not now",
         "Continue",
-        "await widget.onEnableLivePlaceAlertsBackground();",
+        "await widget.onEnableLivePlaceAlertsForeground();",
         "_debugState.accessLevel != 'foregroundOnly'",
         "Location was not granted. Live Risky Place alerts remain off.",
         "Review privacy policy",
@@ -95,7 +92,7 @@ def main() -> None:
     method = risky[method_start:method_end]
 
     disclosure_pos = method.find("_showBackgroundLocationDisclosure")
-    callback_pos = method.find("onEnableLivePlaceAlertsBackground")
+    callback_pos = method.find("onEnableLivePlaceAlertsForeground")
     settings_pos = method.find("LivePlaceAlertService.instance.openAppSettings")
     if not (0 <= disclosure_pos < callback_pos < settings_pos):
         fail(
@@ -107,6 +104,29 @@ def main() -> None:
             "all Risky Places settings entry points must route through the "
             "single disclosed background setup method"
         )
+
+    if "onEnableLivePlaceAlertsBackground" in risky:
+        fail(
+            "Risky Places must use the foreground permission callback before "
+            "opening Android background-location settings"
+        )
+
+    require(
+        home,
+        "onEnableLivePlaceAlertsForeground:\n              widget.onEnableLivePlaceAlertsForeground,",
+        "HomeShell foreground permission wiring",
+    )
+
+    require(
+        risky,
+        "if (_primarySetupState(highlightedPlace) != 'Almost ready')",
+        "single Android-settings CTA contract",
+    )
+    require(
+        risky,
+        "Use the “Finish Android location access” card above",
+        "highlighted-place permission guidance",
+    )
 
     for token in (
         "ScratchLess privacy policy",
