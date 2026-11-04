@@ -120,6 +120,23 @@ jobs:
       - name: Verify SL-81C background location contract
         run: python tools/verify_sl81c.py --ci
 
+      - name: Test SL-81D Store surface policy - QA
+        run: >
+          flutter test
+          --dart-define=SCRATCHLESS_BUILD=qa
+          --dart-define=EXPECTED_SCRATCHLESS_BUILD=qa
+          test/sl81d_store_surface_test.dart
+
+      - name: Test SL-81D Store surface policy - Store
+        run: >
+          flutter test
+          --dart-define=SCRATCHLESS_BUILD=store
+          --dart-define=EXPECTED_SCRATCHLESS_BUILD=store
+          test/sl81d_store_surface_test.dart
+
+      - name: Verify SL-81D Store cleanup contract
+        run: python tools/verify_sl81d.py --ci
+
       - name: Prepare QA signing posture
         shell: bash
         env:
@@ -216,7 +233,6 @@ jobs:
 
       - name: Build Store release APK
         env:
-          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
           SCRATCHLESS_STORE_KEYSTORE_PASSWORD: ${{ secrets.SCRATCHLESS_STORE_KEYSTORE_PASSWORD }}
           SCRATCHLESS_STORE_KEY_ALIAS: ${{ secrets.SCRATCHLESS_STORE_KEY_ALIAS }}
           SCRATCHLESS_STORE_KEY_PASSWORD: ${{ secrets.SCRATCHLESS_STORE_KEY_PASSWORD }}
@@ -225,11 +241,9 @@ jobs:
           --flavor store
           --release
           --dart-define=SCRATCHLESS_BUILD=store
-          --dart-define=GOOGLE_PLACES_API_KEY=$GOOGLE_PLACES_API_KEY
 
       - name: Build Store release AAB
         env:
-          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
           SCRATCHLESS_STORE_KEYSTORE_PASSWORD: ${{ secrets.SCRATCHLESS_STORE_KEYSTORE_PASSWORD }}
           SCRATCHLESS_STORE_KEY_ALIAS: ${{ secrets.SCRATCHLESS_STORE_KEY_ALIAS }}
           SCRATCHLESS_STORE_KEY_PASSWORD: ${{ secrets.SCRATCHLESS_STORE_KEY_PASSWORD }}
@@ -238,7 +252,6 @@ jobs:
           --flavor store
           --release
           --dart-define=SCRATCHLESS_BUILD=store
-          --dart-define=GOOGLE_PLACES_API_KEY=$GOOGLE_PLACES_API_KEY
 
       - name: Collect build artifacts
         shell: bash

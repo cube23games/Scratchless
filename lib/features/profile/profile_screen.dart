@@ -550,7 +550,11 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  premiumState.isPremium ? 'Premium active' : 'Premium available',
+                  premiumState.isPremium
+                      ? 'Premium active'
+                      : AppBuildConfig.localPremiumTrialEnabled
+                          ? 'Premium QA preview'
+                          : 'Premium coming soon',
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
@@ -559,8 +563,12 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   premiumState.isPremium
-                      ? 'You have access to premium scaffolding and deeper tools.'
-                      : 'Unlock deeper insights, longer history, custom reminders, and more support tools.',
+                      ? (AppBuildConfig.localPremiumTrialEnabled
+                          ? 'QA Premium is active for feature testing.'
+                          : 'Premium tools are active.')
+                      : AppBuildConfig.localPremiumTrialEnabled
+                          ? 'QA can unlock Premium locally to test gated tools.'
+                          : 'Premium subscriptions will be added through Google Play. Core free tools remain available.',
                   style: const TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 14,

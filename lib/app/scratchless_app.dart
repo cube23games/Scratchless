@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/config/app_build_config.dart';
 import '../core/models/accountability_partner.dart';
 import '../core/models/milestone_state.dart';
 import '../core/models/premium_state.dart';
@@ -147,6 +148,10 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
       return;
     }
 
+    final shouldClearSimulatedPremium =
+        !AppBuildConfig.localPremiumTrialEnabled &&
+        stored.premiumState.isPremium;
+
     setState(() {
       _isLoading = false;
       _isOnboarded = stored.isOnboarded;
@@ -156,7 +161,9 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
       _logs = stored.logs;
       _reminderSettings = stored.reminderSettings;
       _urgeSessions = stored.urgeSessions;
-      _premiumState = stored.premiumState;
+      _premiumState = AppBuildConfig.localPremiumTrialEnabled
+          ? stored.premiumState
+          : PremiumState.free();
       _weeklyReflectionArchive = stored.weeklyReflectionArchive;
       _accountabilityPartner = stored.accountabilityPartner;
       _stopReasons = stored.stopReasons;
@@ -165,6 +172,10 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
       _hasSeenSuccessPremiumPrompt = stored.hasSeenSuccessPremiumPrompt;
       _milestoneState = stored.milestoneState;
     });
+
+    if (shouldClearSimulatedPremium) {
+      await _persistState();
+    }
 
     _syncReminderNotifications();
     _syncLivePlaceAlerts();
@@ -340,7 +351,8 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
   }
 
   void _startPremiumTrial() {
-    if (_premiumState.isPremium) {
+    if (!AppBuildConfig.localPremiumTrialEnabled ||
+        _premiumState.isPremium) {
       return;
     }
 

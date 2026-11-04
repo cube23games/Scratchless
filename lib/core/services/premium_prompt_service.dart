@@ -1,3 +1,4 @@
+import '../config/app_build_config.dart';
 import '../models/premium_state.dart';
 
 enum PremiumPromptType {
@@ -18,6 +19,10 @@ class PremiumPromptService {
     bool isEmergencyFlow = false,
     bool isPurchaseMoment = false,
   }) {
+    if (!AppBuildConfig.localPremiumTrialEnabled) {
+      return false;
+    }
+
     if (premiumState.isPremium) {
       return false;
     }

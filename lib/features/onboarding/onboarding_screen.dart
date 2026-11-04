@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/app_theme.dart';
+import '../../core/config/app_build_config.dart';
 import '../../core/models/starting_plan.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_card.dart';
@@ -205,7 +206,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _next() {
     if (_isLastStep) {
-      _openOnboardingPaywall();
+      if (AppBuildConfig.localPremiumTrialEnabled) {
+        _openOnboardingPaywall();
+      } else {
+        _finishOnboarding();
+      }
       return;
     }
 
@@ -904,7 +909,7 @@ class _OnboardingPaywallScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Billing is not wired yet in this build. Premium trial is simulated locally for now.',
+                  'ScratchLess QA can unlock Premium locally for testing. No Google Play purchase occurs.',
                   style: TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 12,
@@ -915,7 +920,7 @@ class _OnboardingPaywallScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           AppButton(
-            label: 'Try Premium',
+            label: 'Enable QA Premium',
             icon: Icons.workspace_premium_rounded,
             onPressed: () {
               Navigator.of(context).pop(_OnboardingPaywallChoice.premium);

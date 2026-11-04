@@ -184,7 +184,20 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
   }
 
   String _statusDiagnosticsLine() {
-    return 'Permission: ${_debugState.permissionLabel} • Armed: ${_debugState.eligiblePlaceCount} • Blocked: ${_debugState.blockedPlaceCount}';
+    if (AppBuildConfig.internalDiagnosticsVisible) {
+      return 'Permission: ${_debugState.permissionLabel} • Armed: ${_debugState.eligiblePlaceCount} • Blocked: ${_debugState.blockedPlaceCount}';
+    }
+    if (_debugState.eligiblePlaceCount > 0) {
+      return _debugState.eligiblePlaceCount == 1
+          ? '1 saved place is ready for live alerts.'
+          : '${_debugState.eligiblePlaceCount} saved places are ready for live alerts.';
+    }
+    if (_debugState.blockedPlaceCount > 0) {
+      return _debugState.blockedPlaceCount == 1
+          ? '1 saved place still needs setup.'
+          : '${_debugState.blockedPlaceCount} saved places still need setup.';
+    }
+    return 'Live alert status is up to date.';
   }
 
   String? _setupProgressNote() {
@@ -256,7 +269,9 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
     final blocker = _debugState.topBlocker;
 
     if (blocker == 'Need Premium') {
-      return 'Start Premium';
+      return AppBuildConfig.localPremiumTrialEnabled
+          ? 'Start QA Premium'
+          : null;
     }
     if (blocker == 'Finish live alerts in Android settings') {
       return 'Open Android location settings';
@@ -278,8 +293,10 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
     final blocker = _debugState.topBlocker;
 
     if (blocker == 'Need Premium') {
-      widget.onStartPremiumTrial();
-      await _refreshLiveAlertDebugState();
+      if (AppBuildConfig.localPremiumTrialEnabled) {
+        widget.onStartPremiumTrial();
+        await _refreshLiveAlertDebugState();
+      }
       return;
     }
 
@@ -358,7 +375,9 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
       case 'Turn on live alerts for this place':
         return 'Turn on live alerts for this place.';
       case 'Start Premium to arm this place':
-        return 'Start Premium to turn live alerts on for this place.';
+        return AppBuildConfig.localPremiumTrialEnabled
+            ? 'Start QA Premium to turn live alerts on for this place.'
+            : 'This place is saved. Live alerts require Premium.';
       default:
         return rawStatus;
     }
@@ -944,7 +963,9 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
 
   String _setupHeadline() {
     if (!widget.premiumState.isPremium) {
-      return 'Start Premium to unlock live alerts';
+      return AppBuildConfig.localPremiumTrialEnabled
+          ? 'Start QA Premium to unlock live alerts'
+          : 'Premium live alerts are coming soon';
     }
     if (_debugState.isArmed && _debugState.eligiblePlaceCount > 0) {
       return 'Live alerts are ready to help';
@@ -957,7 +978,9 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
 
   String _setupBody() {
     if (!widget.premiumState.isPremium) {
-      return 'Premium adds live alerts for the risky places you save.';
+      return AppBuildConfig.localPremiumTrialEnabled
+          ? 'QA Premium adds live alerts for the risky places you save.'
+          : 'You can save risky places now. Premium live alerts will become available with subscriptions.';
     }
     if (_debugState.isArmed && _debugState.eligiblePlaceCount > 0) {
       return 'ScratchLess can now watch your saved risky places and nudge you before a stop becomes automatic.';
@@ -1881,52 +1904,54 @@ class _RiskyPlacesScreenState extends State<RiskyPlacesScreen> with WidgetsBindi
               ),
             ),
           ],
+          if (AppBuildConfig.internalDiagnosticsVisible) ...[
           const SizedBox(height: 12),
-          AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Recent live alert activity',
-                  style: TextStyle(
-                    color: AppTheme.mutedText,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Shows when places arm, when you enter, and when alerts send or cooldown.',
-                  style: TextStyle(
-                    color: AppTheme.mutedText,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (_debugState.recentEvents.isEmpty)
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   const Text(
-                    'No live alert activity yet.',
+                    'Recent live alert activity',
                     style: TextStyle(
                       color: AppTheme.mutedText,
-                      fontSize: 14,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
                     ),
-                  )
-                else
-                  ..._debugState.recentEvents.map((event) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(
-                        '${_eventTimeLabel(event.createdAt)} — ${event.message}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Shows when places arm, when you enter, and when alerts send or cooldown.',
+                    style: TextStyle(
+                      color: AppTheme.mutedText,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (_debugState.recentEvents.isEmpty)
+                    const Text(
+                      'No live alert activity yet.',
+                      style: TextStyle(
+                        color: AppTheme.mutedText,
+                        fontSize: 14,
                       ),
-                    );
-                  }),
-              ],
+                    )
+                  else
+                    ..._debugState.recentEvents.map((event) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          '${_eventTimeLabel(event.createdAt)} — ${event.message}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      );
+                    }),
+                ],
+              ),
             ),
-          ),
+            ],
           if (_places.isNotEmpty) ...[
             const SizedBox(height: 12),
             AppCard(
@@ -2353,6 +2378,10 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
   }
 
   Future<void> _searchForPlace() async {
+    if (!AppBuildConfig.deferredPlaceSearchVisible) {
+      return;
+    }
+
     final selection = await Navigator.of(context).push<PlaceSearchSelection>(
       MaterialPageRoute<PlaceSearchSelection>(
         builder: (_) => const PlaceSearchScreen(),
@@ -2645,20 +2674,24 @@ class _EditRiskyPlaceScreenState extends State<_EditRiskyPlaceScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Search for the place, use your current spot, or enter coordinates manually.',
-                  style: TextStyle(
+                Text(
+                  AppBuildConfig.deferredPlaceSearchVisible
+                      ? 'Search for the place, use your current spot, or enter coordinates manually.'
+                      : 'Use your current spot or enter coordinates manually.',
+                  style: const TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 14,
                   ),
                 ),
-                const SizedBox(height: 12),
-                AppButton(
-                  label: 'Search for a place',
-                  icon: Icons.search_rounded,
-                  isPrimary: false,
-                  onPressed: _searchForPlace,
-                ),
+                if (AppBuildConfig.deferredPlaceSearchVisible) ...[
+                  const SizedBox(height: 12),
+                  AppButton(
+                    label: 'Search for a place',
+                    icon: Icons.search_rounded,
+                    isPrimary: false,
+                    onPressed: _searchForPlace,
+                  ),
+                ],
                 if (_selectedPlaceAddress != null &&
                     _selectedPlaceAddress!.trim().isNotEmpty) ...[
                   const SizedBox(height: 10),

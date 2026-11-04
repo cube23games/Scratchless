@@ -8,4 +8,7 @@ class AppBuildConfig {
 
   static const bool qaToolsEnabled = buildName == 'qa';
   static const bool storeBuild = !qaToolsEnabled;
+  static const bool localPremiumTrialEnabled = qaToolsEnabled;
+  static const bool deferredPlaceSearchVisible = qaToolsEnabled;
+  static const bool internalDiagnosticsVisible = qaToolsEnabled;
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/app_theme.dart';
+import '../../core/config/app_build_config.dart';
 import '../../core/models/premium_state.dart';
 import '../../core/services/feature_gate_service.dart';
 import '../../core/services/location_permission_plan_service.dart';
@@ -190,7 +191,8 @@ class PremiumScreen extends StatelessWidget {
                 AppButton(
                   label: FeatureGateService.premiumCtaLabel(premiumState),
                   icon: Icons.workspace_premium_rounded,
-                  onPressed: isPremium
+                  onPressed: isPremium ||
+                          !AppBuildConfig.localPremiumTrialEnabled
                       ? null
                       : () {
                           onStartTrial();
@@ -200,8 +202,12 @@ class PremiumScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   isPremium
-                      ? 'Premium is active on this device.'
-                      : 'Billing is not wired yet in this build. This is the soft upgrade scaffold.',
+                      ? (AppBuildConfig.localPremiumTrialEnabled
+                          ? 'QA Premium is active on this device.'
+                          : 'Premium is active on this device.')
+                      : (AppBuildConfig.localPremiumTrialEnabled
+                          ? 'QA can unlock Premium locally for testing. No purchase occurs.'
+                          : 'Premium subscriptions are not available yet. Free ScratchLess tools remain available.'),
                   style: const TextStyle(
                     color: AppTheme.mutedText,
                     fontSize: 12,
@@ -351,8 +357,8 @@ class PremiumScreen extends StatelessWidget {
                 _BulletLine('Weekly reflection summaries'),
                 _BulletLine('Custom reminder schedules'),
                 _BulletLine('Exportable progress reports'),
-                _BulletLine('Future live place alerts'),
-                _BulletLine('Future accountability tools'),
+                _BulletLine('Live Risky Place alerts'),
+                _BulletLine('Expanded accountability tools'),
               ],
             ),
           ),
