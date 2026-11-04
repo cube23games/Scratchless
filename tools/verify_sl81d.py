@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import re
 import subprocess
 from pathlib import Path
 
@@ -81,7 +82,32 @@ def main():
         req(app, token, "app entitlement cleanup")
 
     req(gate, "'Premium coming soon'", "Premium CTA")
-    req(prompts, "if (!AppBuildConfig.localPremiumTrialEnabled)", "prompt suppression")
+    forbid(
+        prompts,
+        "AppBuildConfig",
+        "generic Premium prompt service",
+    )
+
+    prompt_calls = list(
+        re.finditer(
+            r"PremiumPromptService\.canShow\s*\(",
+            app,
+        )
+    )
+
+    if len(prompt_calls) != 2:
+        fail(
+            "ScratchLessApp must contain exactly two Premium prompt "
+            f"call sites; found {len(prompt_calls)}"
+        )
+
+    for call in prompt_calls:
+        prefix = app[max(0, call.start() - 220):call.start()]
+        if "AppBuildConfig.localPremiumTrialEnabled" not in prefix:
+            fail(
+                "each ScratchLessApp Premium prompt call must be "
+                "gated by localPremiumTrialEnabled"
+            )
 
     for token in (
         "if (AppBuildConfig.localPremiumTrialEnabled)",

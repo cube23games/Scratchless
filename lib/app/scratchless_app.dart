@@ -626,7 +626,9 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
           startingPlan: _startingPlan,
           onComplete: _completeDetailedUrgeSession,
           onStartPremiumTrial: _startPremiumTrial,
-          shouldShowSuccessPremiumPrompt: PremiumPromptService.canShow(
+          shouldShowSuccessPremiumPrompt:
+              AppBuildConfig.localPremiumTrialEnabled &&
+              PremiumPromptService.canShow(
             type: PremiumPromptType.firstUrgeWin,
             premiumState: _premiumState,
             hasSeenSuccessPremiumPrompt: _hasSeenSuccessPremiumPrompt,
@@ -749,6 +751,7 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
                    onOpenLiveAlertRescueTest:
                        _openLiveAlertRescueTest,
                   shouldShowSuccessPremiumPrompt:
+                      AppBuildConfig.localPremiumTrialEnabled &&
                       PremiumPromptService.canShow(
                     type: PremiumPromptType.firstUrgeWin,
                     premiumState: _premiumState,
