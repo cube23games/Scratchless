@@ -41,7 +41,9 @@ class RevenueCatBillingService {
     final stopwatch = Stopwatch()..start();
 
     try {
-      rc.Purchases.logLevel = rc.LogLevel.warn;
+      await rc.Purchases.setLogLevel(
+        rc.LogLevel.warn,
+      );
 
       final configuration = rc.PurchasesConfiguration(
         AppBuildConfig.revenueCatAndroidPublicSdkKey,

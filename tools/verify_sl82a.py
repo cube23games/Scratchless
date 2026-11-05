@@ -142,6 +142,7 @@ def main():
 
     for token in (
         "premiumEntitlementId = 'premium'",
+        "Purchases.setLogLevel",
         "Purchases.configure",
         "addCustomerInfoUpdateListener",
         "getCustomerInfo().timeout",
@@ -153,6 +154,12 @@ def main():
             token,
             "RevenueCat authority bridge",
         )
+
+    forbid(
+        service,
+        "Purchases.logLevel =",
+        "RevenueCat 10.x logging API",
+    )
 
     for forbidden in (
         "Purchases.getOfferings",
