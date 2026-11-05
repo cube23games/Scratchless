@@ -111,7 +111,12 @@ def main():
 
     for token in (
         "if (AppBuildConfig.localPremiumTrialEnabled)",
+        "if (!AppBuildConfig.localPremiumTrialEnabled)",
         "_finishOnboarding();",
+        "? 'See Premium'",
+        ": 'Back'",
+        "? _openOnboardingPaywall",
+        ": _back",
         "Enable QA Premium",
         "No Google Play purchase occurs",
     ):

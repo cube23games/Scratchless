@@ -186,6 +186,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _openOnboardingPaywall() async {
+    if (!AppBuildConfig.localPremiumTrialEnabled) {
+      return;
+    }
+
     final choice = await Navigator.of(context).push<_OnboardingPaywallChoice>(
       MaterialPageRoute(
         builder: (_) => const _OnboardingPaywallScreen(),
@@ -739,7 +743,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return 'I’m just looking';
     }
     if (_isLastStep) {
-      return 'See Premium';
+      return AppBuildConfig.localPremiumTrialEnabled
+          ? 'See Premium'
+          : 'Back';
     }
     return 'Back';
   }
@@ -749,7 +755,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return _next;
     }
     if (_isLastStep) {
-      return _openOnboardingPaywall;
+      return AppBuildConfig.localPremiumTrialEnabled
+          ? _openOnboardingPaywall
+          : _back;
     }
     return _back;
   }
