@@ -31,6 +31,12 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Upload resolved dependency lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: scratchless-sl82a-pubspec-lock
+          path: pubspec.lock
+
       - name: Verify pinned Tracelet
         run: flutter pub deps --style=compact | grep -F "tracelet 1.8.13"
 
@@ -137,6 +143,44 @@ jobs:
       - name: Verify SL-81D Store cleanup contract
         run: python tools/verify_sl81d.py --ci
 
+      - name: Test SL-82A RevenueCat policy - QA
+        run: >
+          flutter test
+          --dart-define=SCRATCHLESS_BUILD=qa
+          --dart-define=REVENUECAT_ANDROID_PUBLIC_SDK_KEY=goog_ci_placeholder
+          --dart-define=EXPECTED_SCRATCHLESS_BUILD=qa
+          --dart-define=EXPECTED_REVENUECAT_ENABLED=false
+          test/sl82a_revenuecat_foundation_test.dart
+
+      - name: Test SL-82A RevenueCat policy - Store no key
+        run: >
+          flutter test
+          --dart-define=SCRATCHLESS_BUILD=store
+          --dart-define=EXPECTED_SCRATCHLESS_BUILD=store
+          --dart-define=EXPECTED_REVENUECAT_ENABLED=false
+          test/sl82a_revenuecat_foundation_test.dart
+
+      - name: Test SL-82A RevenueCat policy - Store Test Store key
+        run: >
+          flutter test
+          --dart-define=SCRATCHLESS_BUILD=store
+          --dart-define=REVENUECAT_ANDROID_PUBLIC_SDK_KEY=test_ci_placeholder
+          --dart-define=EXPECTED_SCRATCHLESS_BUILD=store
+          --dart-define=EXPECTED_REVENUECAT_ENABLED=false
+          test/sl82a_revenuecat_foundation_test.dart
+
+      - name: Test SL-82A RevenueCat policy - Store configured
+        run: >
+          flutter test
+          --dart-define=SCRATCHLESS_BUILD=store
+          --dart-define=REVENUECAT_ANDROID_PUBLIC_SDK_KEY=goog_ci_placeholder
+          --dart-define=EXPECTED_SCRATCHLESS_BUILD=store
+          --dart-define=EXPECTED_REVENUECAT_ENABLED=true
+          test/sl82a_revenuecat_foundation_test.dart
+
+      - name: Verify SL-82A RevenueCat foundation
+        run: python tools/verify_sl82a.py --ci
+
       - name: Prepare QA signing posture
         shell: bash
         env:
@@ -233,6 +277,7 @@ jobs:
 
       - name: Build Store release APK
         env:
+          REVENUECAT_ANDROID_PUBLIC_SDK_KEY: ${{ secrets.REVENUECAT_ANDROID_PUBLIC_SDK_KEY }}
           SCRATCHLESS_STORE_KEYSTORE_PASSWORD: ${{ secrets.SCRATCHLESS_STORE_KEYSTORE_PASSWORD }}
           SCRATCHLESS_STORE_KEY_ALIAS: ${{ secrets.SCRATCHLESS_STORE_KEY_ALIAS }}
           SCRATCHLESS_STORE_KEY_PASSWORD: ${{ secrets.SCRATCHLESS_STORE_KEY_PASSWORD }}
@@ -241,9 +286,11 @@ jobs:
           --flavor store
           --release
           --dart-define=SCRATCHLESS_BUILD=store
+          --dart-define=REVENUECAT_ANDROID_PUBLIC_SDK_KEY=$REVENUECAT_ANDROID_PUBLIC_SDK_KEY
 
       - name: Build Store release AAB
         env:
+          REVENUECAT_ANDROID_PUBLIC_SDK_KEY: ${{ secrets.REVENUECAT_ANDROID_PUBLIC_SDK_KEY }}
           SCRATCHLESS_STORE_KEYSTORE_PASSWORD: ${{ secrets.SCRATCHLESS_STORE_KEYSTORE_PASSWORD }}
           SCRATCHLESS_STORE_KEY_ALIAS: ${{ secrets.SCRATCHLESS_STORE_KEY_ALIAS }}
           SCRATCHLESS_STORE_KEY_PASSWORD: ${{ secrets.SCRATCHLESS_STORE_KEY_PASSWORD }}
@@ -252,6 +299,7 @@ jobs:
           --flavor store
           --release
           --dart-define=SCRATCHLESS_BUILD=store
+          --dart-define=REVENUECAT_ANDROID_PUBLIC_SDK_KEY=$REVENUECAT_ANDROID_PUBLIC_SDK_KEY
 
       - name: Collect build artifacts
         shell: bash

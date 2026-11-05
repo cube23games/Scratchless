@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/config/app_build_config.dart';
@@ -15,6 +17,7 @@ import '../core/models/weekly_reflection_archive_item.dart';
 import '../core/services/local_notification_service.dart';
 import '../core/services/live_place_alert_service.dart';
 import '../core/services/premium_prompt_service.dart';
+import '../core/services/revenuecat_billing_service.dart';
 import '../core/services/milestone_service.dart';
 import '../core/services/risky_time_service.dart';
 import '../core/services/spend_cap_service.dart';
@@ -178,6 +181,47 @@ class _ScratchLessAppState extends State<ScratchLessApp> {
     }
 
     _syncReminderNotifications();
+    _syncLivePlaceAlerts();
+    _scheduleRevenueCatBootstrap();
+  }
+
+  void _scheduleRevenueCatBootstrap() {
+    if (!AppBuildConfig.revenueCatEnabled) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future<void>.delayed(
+        const Duration(milliseconds: 350),
+        () {
+          if (!mounted) {
+            return;
+          }
+
+          unawaited(
+            RevenueCatBillingService.instance.initialize(
+              onPremiumChanged:
+                  _applyRevenueCatPremiumEntitlement,
+            ),
+          );
+        },
+      );
+    });
+  }
+
+  void _applyRevenueCatPremiumEntitlement(bool isPremium) {
+    if (!mounted ||
+        AppBuildConfig.localPremiumTrialEnabled ||
+        _premiumState.isPremium == isPremium) {
+      return;
+    }
+
+    setState(() {
+      _premiumState = _premiumState.copyWith(
+        isPremium: isPremium,
+      );
+    });
+
     _syncLivePlaceAlerts();
   }
 
